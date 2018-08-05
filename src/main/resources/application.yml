@@ -37,7 +37,7 @@ spring:
 logging:
     level:
         club.projectgaia: info
-    file: /data/log/varys.log
+    file: H:\\varys.log
     root: INFO
 
 
