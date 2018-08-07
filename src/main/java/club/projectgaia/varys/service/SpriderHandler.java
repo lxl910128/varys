@@ -374,16 +374,19 @@ public class SpriderHandler {
     }
 
     public void saveContent() throws Exception {
+        log.info("start save content");
         long count = newsDailyRepository.count();
         Pageable pageable = PageRequest.of(0, 100);
-        while (true) {
+        boolean flag = true;
+        while (flag) {
             List<NewsContent> allSave = new ArrayList<>();
             List<NewsDaily> daily = newsDailyRepository.findAllByDocIDNotNullOrderByCreateTimeDesc(pageable);
             count -= 100;
             for (NewsDaily news : daily) {
                 NewsContent newsContent = newsContentRepository.findByDocID(news.getDocID());
                 if (newsContent != null) {
-                    return;
+                    flag = false;
+                    continue;
                 }
                 Document doc = Jsoup.connect(news.getLinkUrl()).get();
                 String keyWords = doc.selectFirst("meta[name=keywords]").attr("content").replace("\r", "").replace("\n", "");
@@ -425,7 +428,7 @@ public class SpriderHandler {
             pageable = pageable.next();
 
             if (count <= 0) {
-                return;
+                flag = false;
             }
 
         }
@@ -433,6 +436,7 @@ public class SpriderHandler {
     }
 
     public void getWhxw() throws Exception {
+        log.info("start get whxw");
         Document doc = Jsoup.connect("http://www.xinhuanet.com/whxw.htm").get();
         Elements hideDataById = doc.select("#hideData");
         Elements allLi = hideDataById.select(".clearfix");
