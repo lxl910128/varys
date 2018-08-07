@@ -1,9 +1,11 @@
 package club.projectgaia.varys.service;
 
 import club.projectgaia.varys.domain.po.NewsAbstract;
+import club.projectgaia.varys.domain.po.NewsContent;
 import club.projectgaia.varys.domain.po.NewsDaily;
 import club.projectgaia.varys.domain.po.NewsType;
 import club.projectgaia.varys.repository.NewsAbstractRepository;
+import club.projectgaia.varys.repository.NewsContentRepository;
 import club.projectgaia.varys.repository.NewsDailyRepository;
 import club.projectgaia.varys.repository.NewsTypeRepository;
 
@@ -38,6 +40,7 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -53,6 +56,11 @@ public class SpriderHandler {
 
     @Autowired
     NewsDailyRepository newsDailyRepository;
+    @Autowired
+    NewsContentRepository newsContentRepository;
+
+    private static Pattern p = Pattern.compile("来源：(.*)</span>");
+
 
     @Resource(name = "httpClientManagerFactoryBean")
     private CloseableHttpClient client;
@@ -363,6 +371,65 @@ public class SpriderHandler {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void saveContent() throws Exception {
+        long count = newsDailyRepository.count();
+        Pageable pageable = PageRequest.of(0, 100);
+        while (true) {
+            List<NewsContent> allSave = new ArrayList<>();
+            List<NewsDaily> daily = newsDailyRepository.findAllByDocIDNotNullOrderByCreateTimeDesc(pageable);
+            count -= 100;
+            for (NewsDaily news : daily) {
+                NewsContent newsContent = newsContentRepository.findByDocID(news.getDocID());
+                if (newsContent != null) {
+                    return;
+                }
+                Document doc = Jsoup.connect(news.getLinkUrl()).get();
+                String keyWords = doc.selectFirst("meta[name=keywords]").attr("content").replace("\r", "").replace("\n", "");
+                String description = doc.selectFirst("meta[name=description]").attr("content").replace("\r", "").replace("\n", "").replace("　","");;
+                description = description.replace(news.getTitle(), "").replace("-", "");
+
+                String time = doc.selectFirst("span.h-time").text();
+                Element sourceE = doc.selectFirst("em#source");
+                String source;
+                if (sourceE != null) {
+                    source = sourceE.text();
+                } else {
+                    Matcher m = p.matcher(doc.outerHtml());
+                    if (m.find()) {
+                        source = m.group(1).replace("\r", "").replace("\n", "").replace("　","").replace(" ","");
+                    }else {
+                        source = "新华社";
+                    }
+                }
+                StringBuilder content = new StringBuilder();
+                Elements elements = doc.select("p");
+                elements.forEach(x -> {
+                    content.append(x.text());
+                });
+                String all = content.toString().replaceAll("\r", "").replaceAll("\n", "").replace("　","");;
+                NewsContent save = new NewsContent();
+                save.setContent(all);
+                save.setTime(time);
+                save.setDescription(description);
+                save.setDocID(news.getDocID());
+                save.setKeyWords(keyWords);
+                save.setSource(source);
+                save.setTitle(news.getTitle());
+                save.setLinkUrl(news.getLinkUrl());
+                allSave.add(save);
+
+            }
+            newsContentRepository.saveAll(allSave);
+            pageable = pageable.next();
+
+            if (count <= 0) {
+                return;
+            }
+
+        }
+
     }
 
     public void getWhxw() throws Exception {

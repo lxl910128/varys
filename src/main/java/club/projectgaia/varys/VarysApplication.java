@@ -7,9 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 
 @SpringBootApplication
+@EnableJpaAuditing
 public class VarysApplication implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(VarysApplication.class);
@@ -27,6 +29,7 @@ public class VarysApplication implements CommandLineRunner {
         //legal comments overseas gov gundong reform
         //handler.getByType("reform");
         handler.getWhxw();
+        handler.saveContent();
         //handler.getAll();
     }
 }
