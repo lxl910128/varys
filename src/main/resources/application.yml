@@ -23,10 +23,12 @@ httpclient:
 spring:
   datasource:
     #url: jdbc:mysql://172.24.8.100:3306/varys?characterEncoding=utf-8
-    url: jdbc:mysql://192.168.3.22:3306/varys?characterEncoding=utf-8
+    url: jdbc:mysql://176.122.176.71:3306/varys?characterEncoding=utf-8
     type: com.alibaba.druid.pool.DruidDataSource
     username: root
     password: 12cf0d30
+    #username: test
+    #password: test
     driver-class-name: com.mysql.jdbc.Driver
   jpa:
     hibernate:
@@ -37,7 +39,7 @@ spring:
 logging:
     level:
         club.projectgaia: info
-    file: /data/log/varys.log
+    file: /home/magneto/log/varys.log
     root: INFO
 
 
