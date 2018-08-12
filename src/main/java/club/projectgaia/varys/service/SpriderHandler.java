@@ -1,13 +1,7 @@
 package club.projectgaia.varys.service;
 
-import club.projectgaia.varys.domain.po.NewsAbstract;
-import club.projectgaia.varys.domain.po.NewsContent;
-import club.projectgaia.varys.domain.po.NewsDaily;
-import club.projectgaia.varys.domain.po.NewsType;
-import club.projectgaia.varys.repository.NewsAbstractRepository;
-import club.projectgaia.varys.repository.NewsContentRepository;
-import club.projectgaia.varys.repository.NewsDailyRepository;
-import club.projectgaia.varys.repository.NewsTypeRepository;
+import club.projectgaia.varys.domain.po.*;
+import club.projectgaia.varys.repository.*;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
@@ -58,8 +52,11 @@ public class SpriderHandler {
     NewsDailyRepository newsDailyRepository;
     @Autowired
     NewsContentRepository newsContentRepository;
+    @Autowired
+    ForeignNewsRepository foreignNewsRepository;
 
     private static Pattern p = Pattern.compile("来源：(.*)</span>");
+    private static Pattern timeP = Pattern.compile("20[0-9]{2}-[0-9]{2}-[0-9]{2}");
 
 
     @Resource(name = "httpClientManagerFactoryBean")
@@ -471,25 +468,62 @@ public class SpriderHandler {
     }
 
     public void getForeignNews() throws Exception {
-        String defUrl = "http://www.fmprc.gov.cn/web/fyrbt_673021/jzhsl_673025/";
-        Document doc = Jsoup.connect(defUrl + "default.shtml").get();
-        Element urlList = doc.selectFirst("div.rebox_news");
-        Elements allLi = urlList.select("li");
-        for (Element li : allLi) {
-            String time = li.text().replace("(", "").replace(")", "");
-            Element a = li.selectFirst("a");
-            String title = a.text();
-            String href = a.attr("href");
-            String url = defUrl + href.substring(2, href.length());
+        for (int i = 1; i <= 66; i++) {
+            String defUrl = "http://www.fmprc.gov.cn/web/fyrbt_673021/jzhsl_673025/";
+            Document doc = Jsoup.connect(defUrl + "default_" + i + ".shtml").get();
+            Element urlList = doc.selectFirst("div.rebox_news");
+            Elements allLi = urlList.select("li");
+            List<ForeignNews> needSave = new ArrayList<>();
+            for (Element li : allLi) {
+                Element a = li.selectFirst("a");
+                String title = a.text();
 
-            StringBuilder builder = new StringBuilder();
-            Document foreignNew = Jsoup.connect(url).get();
-            Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
-            Elements allP = content.select("p");
-            for(Element p : allP){
-                builder.append(p.h)
+                String time;
+                Matcher m = timeP.matcher(li.text());
+                if (m.find()) {
+                    time = m.group(0);
+                } else {
+                    time = "";
+                }
+                String href = a.attr("href");
+                String url = defUrl + href.substring(2, href.length());
+
+                StringBuilder builder = new StringBuilder();
+                Document foreignNew = Jsoup.connect(url).get();
+                Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
+                Elements allP = content.select("p");
+                boolean flag = true;
+                StringBuilder context = new StringBuilder();
+                for (Element p : allP) {
+                    String text = p.text();
+                    if (StringUtils.isEmpty(text)) {
+                        Elements allB = p.select("b");
+                        if (allB == null) {
+                            continue;
+                        } else {
+                            flag  = false;
+                            for (Element b : allB) {
+                                builder.append(b.text().replace("　",""));
+                            }
+                        }
+                    } else {
+                        if (flag){
+                            context.append(text.replace("　",""));
+                        }
+                        builder.append(text.replace("　",""));
+                    }
+                }
+
+                ForeignNews news = new ForeignNews();
+                news.setContent(builder.toString());
+                news.setTime(time);
+                news.setTitle(title);
+                news.setUrl(url);
+                news.setContext(context.toString());
+                needSave.add(news);
             }
-
+            foreignNewsRepository.saveAll(needSave);
+            System.out.println(i);
         }
     }
 

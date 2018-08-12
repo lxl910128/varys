@@ -28,8 +28,7 @@ public class VarysApplication implements CommandLineRunner {
         //world yuqing world news fortune topic sports health english energy mil science finance
         //legal comments overseas gov gundong reform
         //handler.getByType("reform");
-        handler.getWhxw();
-        handler.saveContent();
+        handler.getForeignNews();
         //handler.getAll();
     }
 }
