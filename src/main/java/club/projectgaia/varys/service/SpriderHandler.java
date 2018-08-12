@@ -390,7 +390,8 @@ public class SpriderHandler {
                 }
                 Document doc = Jsoup.connect(news.getLinkUrl()).get();
                 String keyWords = doc.selectFirst("meta[name=keywords]").attr("content").replace("\r", "").replace("\n", "");
-                String description = doc.selectFirst("meta[name=description]").attr("content").replace("\r", "").replace("\n", "").replace("　","");;
+                String description = doc.selectFirst("meta[name=description]").attr("content").replace("\r", "").replace("\n", "").replace("　", "");
+                ;
                 description = description.replace(news.getTitle(), "").replace("-", "");
 
                 String time = doc.selectFirst("span.h-time").text();
@@ -401,8 +402,8 @@ public class SpriderHandler {
                 } else {
                     Matcher m = p.matcher(doc.outerHtml());
                     if (m.find()) {
-                        source = m.group(1).replace("\r", "").replace("\n", "").replace("　","").replace(" ","");
-                    }else {
+                        source = m.group(1).replace("\r", "").replace("\n", "").replace("　", "").replace(" ", "");
+                    } else {
                         source = "新华社";
                     }
                 }
@@ -411,7 +412,8 @@ public class SpriderHandler {
                 elements.forEach(x -> {
                     content.append(x.text());
                 });
-                String all = content.toString().replaceAll("\r", "").replaceAll("\n", "").replace("　","");;
+                String all = content.toString().replaceAll("\r", "").replaceAll("\n", "").replace("　", "");
+                ;
                 NewsContent save = new NewsContent();
                 save.setContent(all);
                 save.setTime(time);
@@ -465,6 +467,29 @@ public class SpriderHandler {
         }
         if (needSave.size() > 0) {
             newsDailyRepository.saveAll(needSave);
+        }
+    }
+
+    public void getForeignNews() throws Exception {
+        String defUrl = "http://www.fmprc.gov.cn/web/fyrbt_673021/jzhsl_673025/";
+        Document doc = Jsoup.connect(defUrl + "default.shtml").get();
+        Element urlList = doc.selectFirst("div.rebox_news");
+        Elements allLi = urlList.select("li");
+        for (Element li : allLi) {
+            String time = li.text().replace("(", "").replace(")", "");
+            Element a = li.selectFirst("a");
+            String title = a.text();
+            String href = a.attr("href");
+            String url = defUrl + href.substring(2, href.length());
+
+            StringBuilder builder = new StringBuilder();
+            Document foreignNew = Jsoup.connect(url).get();
+            Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
+            Elements allP = content.select("p");
+            for(Element p : allP){
+                builder.append(p.h)
+            }
+
         }
     }
 

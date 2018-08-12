@@ -26,7 +26,9 @@ public class JTest {
         Elements allA = urlList.select("a");
 
         allA.forEach(x -> {
-
+            System.out.println(x.text());
+            String url = defUrl+x.attr("href").substring(2,)
+            System.out.println(x.attr("href"));
         });
 
 
