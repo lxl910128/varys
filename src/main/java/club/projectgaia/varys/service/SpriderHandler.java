@@ -33,10 +33,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -467,11 +464,70 @@ public class SpriderHandler {
         }
     }
 
-    public void getForeignNews() throws Exception {
-        for (int i = 1; i <= 66; i++) {
-            String defUrl = "http://www.fmprc.gov.cn/web/fyrbt_673021/jzhsl_673025/";
-            Document doc = Jsoup.connect(defUrl + "default_" + i + ".shtml").get();
-            Element urlList = doc.selectFirst("div.rebox_news");
+    public void getForeignNews(String key) throws Exception {
+        //jzhsl_673025 dhdw_673027 wjbzhd
+        String defUrl = "http://www.fmprc.gov.cn/web/fyrbt_673021/" + key + "/";
+        Document doc = Jsoup.connect(defUrl + "default.shtml").get();
+        Element urlList = doc.selectFirst("div.rebox_news");
+        Elements allLi = urlList.select("li");
+        List<ForeignNews> needSave = new ArrayList<>();
+        for (Element li : allLi) {
+            Element a = li.selectFirst("a");
+            String title = a.text();
+
+            String time;
+            Matcher m = timeP.matcher(li.text());
+            if (m.find()) {
+                time = m.group(0);
+            } else {
+                time = "";
+            }
+            String href = a.attr("href");
+            String url = defUrl + href.substring(2, href.length());
+
+            StringBuilder builder = new StringBuilder();
+            Document foreignNew = Jsoup.connect(url).get();
+            Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
+            Elements allP = content.select("p");
+            for (Element p : allP) {
+                String text = p.text();
+                if (StringUtils.isEmpty(text)) {
+                    continue;
+                } else {
+                    builder.append(text.replace("　", ""));
+                }
+            }
+
+            ForeignNews news = new ForeignNews();
+            if (builder.length() == 0) {
+                news.setContent(builder.toString());
+            } else {
+                news.setContent(urlList.text());
+            }
+            news.setTime(time);
+            news.setTitle(title);
+            news.setUrl(url);
+
+            if (news.getContent().indexOf("问：") > 0) {
+                String context = news.getContent().substring(0, news.getContent().indexOf("问："));
+                if (StringUtils.isNotEmpty(context)) {
+                    news.setContext(context);
+                }
+            }
+            Optional<ForeignNews> f = foreignNewsRepository.findById(news.getTitle());
+            if (!f.isPresent()) {
+                needSave.add(news);
+            }
+        }
+        foreignNewsRepository.saveAll(needSave);
+    }
+
+    public void getForeignNews1(String key) throws Exception {
+        //wjbzhd wjbxw_673019
+        String defUrl = "http://www.fmprc.gov.cn/web/" + key + "/";
+        Document doc = Jsoup.connect(defUrl + "default.shtml").get();
+        Elements imboxs = doc.select("div.imbox_ul");
+        for (Element urlList : imboxs) {
             Elements allLi = urlList.select("li");
             List<ForeignNews> needSave = new ArrayList<>();
             for (Element li : allLi) {
@@ -492,39 +548,33 @@ public class SpriderHandler {
                 Document foreignNew = Jsoup.connect(url).get();
                 Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
                 Elements allP = content.select("p");
-                boolean flag = true;
-                StringBuilder context = new StringBuilder();
                 for (Element p : allP) {
                     String text = p.text();
                     if (StringUtils.isEmpty(text)) {
-                        Elements allB = p.select("b");
-                        if (allB == null) {
-                            continue;
-                        } else {
-                            flag  = false;
-                            for (Element b : allB) {
-                                builder.append(b.text().replace("　",""));
-                            }
-                        }
+                        continue;
                     } else {
-                        if (flag){
-                            context.append(text.replace("　",""));
-                        }
-                        builder.append(text.replace("　",""));
+                        builder.append(text.replace("　", ""));
                     }
                 }
 
                 ForeignNews news = new ForeignNews();
-                news.setContent(builder.toString());
+                if (builder.length() == 0) {
+                    news.setContent(builder.toString());
+                } else {
+                    news.setContent(urlList.text());
+                }
                 news.setTime(time);
                 news.setTitle(title);
                 news.setUrl(url);
-                news.setContext(context.toString());
-                needSave.add(news);
+
+                Optional<ForeignNews> f = foreignNewsRepository.findById(news.getTitle());
+                if (!f.isPresent()) {
+                    needSave.add(news);
+                }
             }
             foreignNewsRepository.saveAll(needSave);
-            System.out.println(i);
         }
     }
+
 
 }
