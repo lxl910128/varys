@@ -464,117 +464,155 @@ public class SpriderHandler {
         }
     }
 
-    public void getForeignNews(String key) throws Exception {
+    public void getForeignNews(String key, int start, int end) throws Exception {
         //jzhsl_673025 dhdw_673027 wjbzhd
         String defUrl = "http://www.fmprc.gov.cn/web/fyrbt_673021/" + key + "/";
-        Document doc = Jsoup.connect(defUrl + "default.shtml").get();
-        Element urlList = doc.selectFirst("div.rebox_news");
-        Elements allLi = urlList.select("li");
-        List<ForeignNews> needSave = new ArrayList<>();
-        for (Element li : allLi) {
-            Element a = li.selectFirst("a");
-            String title = a.text();
-
-            String time;
-            Matcher m = timeP.matcher(li.text());
-            if (m.find()) {
-                time = m.group(0);
+        for (int i = start; i < end; i++) {
+            Document doc;
+            if (i == 0) {
+                doc = Jsoup.connect(defUrl + "default.shtml").get();
             } else {
-                time = "";
-            }
-            String href = a.attr("href");
-            String url = defUrl + href.substring(2, href.length());
-
-            StringBuilder builder = new StringBuilder();
-            Document foreignNew = Jsoup.connect(url).get();
-            Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
-            Elements allP = content.select("p");
-            for (Element p : allP) {
-                String text = p.text();
-                if (StringUtils.isEmpty(text)) {
-                    continue;
-                } else {
-                    builder.append(text.replace("　", ""));
-                }
+                doc = Jsoup.connect(defUrl + "default_" + i + ".shtml").get();
             }
 
-            ForeignNews news = new ForeignNews();
-            if (builder.length() == 0) {
-                news.setContent(builder.toString());
-            } else {
-                news.setContent(urlList.text());
-            }
-            news.setTime(time);
-            news.setTitle(title);
-            news.setUrl(url);
-
-            if (news.getContent().indexOf("问：") > 0) {
-                String context = news.getContent().substring(0, news.getContent().indexOf("问："));
-                if (StringUtils.isNotEmpty(context)) {
-                    news.setContext(context);
-                }
-            }
-            Optional<ForeignNews> f = foreignNewsRepository.findById(news.getTitle());
-            if (!f.isPresent()) {
-                needSave.add(news);
-            }
-        }
-        foreignNewsRepository.saveAll(needSave);
-    }
-
-    public void getForeignNews1(String key) throws Exception {
-        //wjbzhd wjbxw_673019
-        String defUrl = "http://www.fmprc.gov.cn/web/" + key + "/";
-        Document doc = Jsoup.connect(defUrl + "default.shtml").get();
-        Elements imboxs = doc.select("div.imbox_ul");
-        for (Element urlList : imboxs) {
+            Element urlList = doc.selectFirst("div.rebox_news");
             Elements allLi = urlList.select("li");
             List<ForeignNews> needSave = new ArrayList<>();
             for (Element li : allLi) {
-                Element a = li.selectFirst("a");
-                String title = a.text();
+                try {
+                    Element a = li.selectFirst("a");
+                    String title = a.text();
 
-                String time;
-                Matcher m = timeP.matcher(li.text());
-                if (m.find()) {
-                    time = m.group(0);
-                } else {
-                    time = "";
-                }
-                String href = a.attr("href");
-                String url = defUrl + href.substring(2, href.length());
-
-                StringBuilder builder = new StringBuilder();
-                Document foreignNew = Jsoup.connect(url).get();
-                Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
-                Elements allP = content.select("p");
-                for (Element p : allP) {
-                    String text = p.text();
-                    if (StringUtils.isEmpty(text)) {
-                        continue;
+                    String time;
+                    Matcher m = timeP.matcher(li.text());
+                    if (m.find()) {
+                        time = m.group(0);
                     } else {
-                        builder.append(text.replace("　", ""));
+                        time = "";
                     }
-                }
+                    String href = a.attr("href");
+                    String url = defUrl + href.substring(2, href.length());
 
-                ForeignNews news = new ForeignNews();
-                if (builder.length() == 0) {
-                    news.setContent(builder.toString());
-                } else {
-                    news.setContent(urlList.text());
-                }
-                news.setTime(time);
-                news.setTitle(title);
-                news.setUrl(url);
+                    StringBuilder builder = new StringBuilder();
+                    Document foreignNew = Jsoup.connect(url).timeout(5000).get();
+                    Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
+                    Elements allP = content.select("p");
+                    for (Element p : allP) {
+                        String text = p.text();
+                        if (StringUtils.isEmpty(text)) {
+                            continue;
+                        } else {
+                            builder.append(text.replace("　", ""));
+                        }
+                    }
 
-                Optional<ForeignNews> f = foreignNewsRepository.findById(news.getTitle());
-                if (!f.isPresent()) {
-                    needSave.add(news);
+                    ForeignNews news = new ForeignNews();
+                    if (builder.length() != 0) {
+                        news.setContent(builder.toString());
+                    } else {
+                        news.setContent(title);
+                    }
+                    news.setTime(time);
+                    news.setTitle(title);
+                    news.setUrl(url);
+                    if ("dhdw_673027".equals(key)) {
+                        news.setType("发言人表态和电话答问");
+                    } else if ("jzhsl_673025".equals(key)) {
+                        news.setType("例行记者会");
+                    }
+
+                    if (news.getContent().indexOf("问：") > 0) {
+                        String context = news.getContent().substring(0, news.getContent().indexOf("问："));
+                        if (StringUtils.isNotEmpty(context)) {
+                            news.setContext(context);
+                        }
+                    }
+                    Optional<ForeignNews> f = foreignNewsRepository.findById(news.getTitle());
+                    if (!f.isPresent()) {
+                        needSave.add(news);
+                    }
+                } catch (Exception e) {
+                    continue;
                 }
             }
             foreignNewsRepository.saveAll(needSave);
         }
+        System.out.println(key + " end");
     }
 
+    public void getForeignNews1(String key, int start, int end) throws Exception {
+        //wjbzhd wjbxw_673019
+        String defUrl = "http://www.fmprc.gov.cn/web/" + key + "/";
+        for (int i = start; i < end; i++) {
+            Document doc;
+            if (i == 0) {
+                doc = Jsoup.connect(defUrl + "default.shtml").timeout(5000).get();
+            } else {
+                doc = Jsoup.connect(defUrl + "default_" + i + ".shtml").timeout(10000).get();
+            }
+            Elements imboxs = doc.select("div.imbox_ul");
+            for (Element urlList : imboxs) {
+                Elements allLi = urlList.select("li");
+                List<ForeignNews> needSave = new ArrayList<>();
+                for (Element li : allLi) {
+                    try {
+
+                        Element a = li.selectFirst("a");
+                        String title = a.text();
+
+                        String time;
+                        Matcher m = timeP.matcher(li.text());
+                        if (m.find()) {
+                            time = m.group(0);
+                        } else {
+                            time = "";
+                        }
+                        String href = a.attr("href");
+                        String url = defUrl + href.substring(2, href.length());
+
+                        StringBuilder builder = new StringBuilder();
+                        Document foreignNew = Jsoup.connect(url).get();
+                        Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
+                        Elements allP = content.select("p");
+                        for (Element p : allP) {
+                            String text = p.text();
+                            if (StringUtils.isEmpty(text)) {
+                                continue;
+                            } else {
+                                builder.append(text.replace("　", ""));
+                            }
+                        }
+
+                        ForeignNews news = new ForeignNews();
+                        if (builder.length() != 0) {
+                            news.setContent(builder.toString());
+                        } else {
+                            news.setContent(title);
+                        }
+                        news.setTime(time);
+                        news.setTitle(title);
+                        news.setUrl(url);
+
+                        if ("wjbzhd".equals(key)) {
+                            news.setType("外交部长活动");
+                        } else if ("wjbxw_673019".equals(key)) {
+                            news.setType("外交部新闻");
+                        } else if ("zyxw".equals(key)) {
+                            news.setType("重要新闻");
+                        }
+
+                        Optional<ForeignNews> f = foreignNewsRepository.findById(news.getTitle());
+                        if (!f.isPresent()) {
+                            needSave.add(news);
+                        }
+                    } catch (Exception e) {
+                        continue;
+                    }
+                }
+                foreignNewsRepository.saveAll(needSave);
+            }
+        }
+        System.out.println(key + " end");
+    }
 
 }

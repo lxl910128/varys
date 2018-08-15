@@ -1,5 +1,10 @@
 package club.projectgaia.varys.domain.po;
 
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.util.Date;
+
 import javax.persistence.*;
 
 import lombok.Data;
@@ -9,6 +14,7 @@ import lombok.Data;
  */
 @Data
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 public class ForeignNews {
 
     private String url;
@@ -23,6 +29,14 @@ public class ForeignNews {
 
     @Column(columnDefinition = "TEXT")
     private String content;
+
+    @Column
+    private String type;
+
+    @Column(nullable = false, updatable = false)
+    @Temporal(TemporalType.TIMESTAMP)
+    @CreatedDate
+    private Date createTime;
 
 
 }
