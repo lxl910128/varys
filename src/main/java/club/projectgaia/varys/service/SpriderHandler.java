@@ -31,8 +31,10 @@ import javax.annotation.Resource;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -377,48 +379,62 @@ public class SpriderHandler {
             List<NewsDaily> daily = newsDailyRepository.findAllByDocIDNotNullOrderByCreateTimeDesc(pageable);
             count -= 100;
             for (NewsDaily news : daily) {
-                NewsContent newsContent = newsContentRepository.findByDocID(news.getDocID());
-                if (newsContent != null) {
-                    flag = false;
-                    continue;
-                }
-                Document doc = Jsoup.connect(news.getLinkUrl()).get();
-                String keyWords = doc.selectFirst("meta[name=keywords]").attr("content").replace("\r", "").replace("\n", "");
-                String description = doc.selectFirst("meta[name=description]").attr("content").replace("\r", "").replace("\n", "").replace("　", "");
-                ;
-                description = description.replace(news.getTitle(), "").replace("-", "");
-
-                String time = doc.selectFirst("span.h-time").text();
-                Element sourceE = doc.selectFirst("em#source");
-                String source;
-                if (sourceE != null) {
-                    source = sourceE.text();
-                } else {
-                    Matcher m = p.matcher(doc.outerHtml());
-                    if (m.find()) {
-                        source = m.group(1).replace("\r", "").replace("\n", "").replace("　", "").replace(" ", "");
-                    } else {
-                        source = "新华社";
+                try {
+                    NewsContent newsContent = newsContentRepository.findByDocID(news.getDocID());
+                    if (newsContent != null) {
+                        flag = false;
+                        continue;
                     }
-                }
-                StringBuilder content = new StringBuilder();
-                Elements elements = doc.select("p");
-                elements.forEach(x -> {
-                    content.append(x.text());
-                });
-                String all = content.toString().replaceAll("\r", "").replaceAll("\n", "").replace("　", "");
-                ;
-                NewsContent save = new NewsContent();
-                save.setContent(all);
-                save.setTime(time);
-                save.setDescription(description);
-                save.setDocID(news.getDocID());
-                save.setKeyWords(keyWords);
-                save.setSource(source);
-                save.setTitle(news.getTitle());
-                save.setLinkUrl(news.getLinkUrl());
-                allSave.add(save);
+                    Document doc = Jsoup.connect(news.getLinkUrl()).get();
+                    Element keyWordsElement = doc.selectFirst("meta[name=keywords]");
+                    String keyWords = "";
+                    if (keyWordsElement != null) {
+                        keyWords = keyWordsElement.attr("content").replace("\r", "").replace("\n", "");
+                    }
+                    String description = "";
+                    Element desc = doc.selectFirst("meta[name=description]");
+                    if (desc != null) {
+                        description = desc.attr("content").replace("\r", "").replace("\n", "").replace("　", "");
+                        description = description.replace(news.getTitle(), "").replace("-", "");
+                    }
 
+                    String time = null;
+                    Element timeE = doc.selectFirst("span.h-time");
+                    if (timeE != null) {
+                        time = timeE.text();
+                    }
+                    Element sourceE = doc.selectFirst("em#source");
+                    String source;
+                    if (sourceE != null) {
+                        source = sourceE.text();
+                    } else {
+                        Matcher m = p.matcher(doc.outerHtml());
+                        if (m.find()) {
+                            source = m.group(1).replace("\r", "").replace("\n", "").replace("　", "").replace(" ", "");
+                        } else {
+                            source = "新华社";
+                        }
+                    }
+                    StringBuilder content = new StringBuilder();
+                    Elements elements = doc.select("p");
+                    elements.forEach(x -> {
+                        content.append(x.text());
+                    });
+                    String all = content.toString().replaceAll("\r", "").replaceAll("\n", "").replace("　", "");
+                    NewsContent save = new NewsContent();
+                    save.setContent(all);
+                    save.setTime(time);
+                    save.setDescription(description);
+                    save.setDocID(news.getDocID());
+                    save.setKeyWords(keyWords);
+                    save.setSource(source);
+                    save.setTitle(news.getTitle());
+                    save.setLinkUrl(news.getLinkUrl());
+                    allSave.add(save);
+
+                } catch (Exception e) {
+                    log.warn("get news error !" + news.getTitle() + ":" + news.getDocID(), e);
+                }
             }
             newsContentRepository.saveAll(allSave);
             pageable = pageable.next();
@@ -464,15 +480,21 @@ public class SpriderHandler {
         }
     }
 
+    private String getContent(String url) throws IOException {
+        HttpGet get = new HttpGet(url);
+        CloseableHttpResponse response = this.client.execute(get);
+        return EntityUtils.toString(response.getEntity(), "utf-8");
+    }
+
     public void getForeignNews(String key, int start, int end) throws Exception {
         //jzhsl_673025 dhdw_673027 wjbzhd
-        String defUrl = "http://www.fmprc.gov.cn/web/fyrbt_673021/" + key + "/";
+        String defUrl = "https://www.fmprc.gov.cn/web/fyrbt_673021/" + key + "/";
         for (int i = start; i < end; i++) {
             Document doc;
             if (i == 0) {
-                doc = Jsoup.connect(defUrl + "default.shtml").get();
+                doc = Jsoup.parse(getContent(defUrl + "default.shtml"));
             } else {
-                doc = Jsoup.connect(defUrl + "default_" + i + ".shtml").get();
+                doc = Jsoup.parse(getContent(defUrl + "default_" + i + ".shtml"));
             }
 
             Element urlList = doc.selectFirst("div.rebox_news");
@@ -494,7 +516,7 @@ public class SpriderHandler {
                     String url = defUrl + href.substring(2, href.length());
 
                     StringBuilder builder = new StringBuilder();
-                    Document foreignNew = Jsoup.connect(url).timeout(5000).get();
+                    Document foreignNew = Jsoup.parse(getContent(url));
                     Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
                     Elements allP = content.select("p");
                     for (Element p : allP) {
@@ -542,13 +564,13 @@ public class SpriderHandler {
 
     public void getForeignNews1(String key, int start, int end) throws Exception {
         //wjbzhd wjbxw_673019
-        String defUrl = "http://www.fmprc.gov.cn/web/" + key + "/";
+        String defUrl = "https://www.fmprc.gov.cn/web/" + key + "/";
         for (int i = start; i < end; i++) {
             Document doc;
             if (i == 0) {
-                doc = Jsoup.connect(defUrl + "default.shtml").timeout(5000).get();
+                doc = Jsoup.parse(getContent(defUrl + "default.shtml"));
             } else {
-                doc = Jsoup.connect(defUrl + "default_" + i + ".shtml").timeout(10000).get();
+                doc = Jsoup.parse(getContent(defUrl + "default_" + i + ".shtml"));
             }
             Elements imboxs = doc.select("div.imbox_ul");
             for (Element urlList : imboxs) {
@@ -571,7 +593,7 @@ public class SpriderHandler {
                         String url = defUrl + href.substring(2, href.length());
 
                         StringBuilder builder = new StringBuilder();
-                        Document foreignNew = Jsoup.connect(url).get();
+                        Document foreignNew = Jsoup.parse(getContent(url));
                         Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
                         Elements allP = content.select("p");
                         for (Element p : allP) {
@@ -613,6 +635,45 @@ public class SpriderHandler {
             }
         }
         System.out.println(key + " end");
+    }
+
+    public void getVegetable(int start, int end) throws Exception {
+        String baseUrl = "http://www.bjtzh.gov.cn";
+        Document first = Jsoup.connect("http://www.bjtzh.gov.cn/n125/n4349/n4400/n4416/index.html").timeout(10000).get();
+        Element e = first.selectFirst("span#comp_2389617");
+        Elements index = e.select("a");
+        for (Element indexCatalog : index) {
+            String secUrl = indexCatalog.attr("href").substring(11);
+            String title = indexCatalog.attr("title");
+
+            System.out.println("-----");
+        }
+
+
+        String url = "http://www.bjtzh.gov.cn/n125/n4349/n4400/n4416/index_2389617_%d.html";
+        for (; end > start; end--) {
+            Document doc = Jsoup.connect(String.format(url, end)).timeout(10000).get();
+            Elements all = doc.select("a");
+            for (Element catalog : all) {
+                System.out.println(catalog.attr("href"));
+                System.out.println(catalog.attr("title"));
+                System.out.println("-----");
+            }
+        }
+    }
+
+    private void getTodayVegetable(String secUrl, File file) throws Exception {
+        try (FileWriter writer = new FileWriter(file)) {
+            String baseUrl = "http://www.bjtzh.gov.cn";
+            Document doc = Jsoup.connect(baseUrl + secUrl).timeout(10000).get();
+            Element table = doc.selectFirst("td#Icontent").selectFirst("table").selectFirst("tbody");
+            Elements row = table.select("tr");
+            for (Element r : row) {
+                r.select("td");
+            }
+        }
+
+
     }
 
 }
