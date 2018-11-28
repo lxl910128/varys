@@ -16,23 +16,27 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 
+import javax.annotation.PostConstruct;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
-@Service("httpClientManagerFactoryBean")
-public class HttpClientManagerFactoryBean implements FactoryBean<CloseableHttpClient>, InitializingBean, DisposableBean {
+//@Service("httpClientManagerFactoryBean")
+//public class HttpClientManagerFactoryBean implements FactoryBean<PoolingHttpClientConnectionManager>, InitializingBean, DisposableBean {
+@Component
+public class HttpClientManagerFactoryBean implements InitializingBean, DisposableBean {
 
     /**
      * FactoryBean生成的目标对象
      */
-    private CloseableHttpClient client;
+    private PoolingHttpClientConnectionManager connManager;
 
     @Autowired
     private ConnectionKeepAliveStrategy connectionKeepAliveStrategy;
@@ -56,8 +60,9 @@ public class HttpClientManagerFactoryBean implements FactoryBean<CloseableHttpCl
          * 所以在下次还要进行http请求的时候，要重新new一个connection manager来build一个HttpClient,
          * 也就是在需要关闭和新建Client的情况下，connection manager不能是单例的.
          */
-        if (null != this.client) {
-            this.client.close();
+        if (null != this.connManager) {
+            this.connManager.close();
+            this.connManager = null;
         }
     }
 
@@ -75,8 +80,15 @@ public class HttpClientManagerFactoryBean implements FactoryBean<CloseableHttpCl
                 .register("http", PlainConnectionSocketFactory.INSTANCE)
                 .register("https", new SSLConnectionSocketFactory(sslcontext))
                 .build();
-        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
-        this.client = HttpClients.custom().setConnectionManager(connManager)
+        connManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+        connManager.setMaxTotal(200);
+        connManager.setDefaultMaxPerRoute(20);
+
+    }
+
+    public CloseableHttpClient getHttpClient(){
+        /*CloseableHttpClient httpClient = HttpClients.createDefault();//如果不采用连接池就是这种方式获取连接*/
+        return HttpClients.custom().setConnectionManager(connManager)
                 .setRetryHandler(httpRequestRetryHandler)
                 .setKeepAliveStrategy(connectionKeepAliveStrategy)
                 //.setRoutePlanner(proxyRoutePlanner)
@@ -84,22 +96,6 @@ public class HttpClientManagerFactoryBean implements FactoryBean<CloseableHttpCl
                 .build();
     }
 
-    // 返回实例的类型
-    @Override
-    public CloseableHttpClient getObject() throws Exception {
-        return this.client;
-    }
-
-    @Override
-    public Class<?> getObjectType() {
-        return (this.client == null ? CloseableHttpClient.class : this.client.getClass());
-    }
-
-    // 构建的实例为单例
-    @Override
-    public boolean isSingleton() {
-        return true;
-    }
 
     public static SSLContext createIgnoreVerifySSL() throws NoSuchAlgorithmException, KeyManagementException {
         SSLContext sc = SSLContext.getInstance("SSLv3");

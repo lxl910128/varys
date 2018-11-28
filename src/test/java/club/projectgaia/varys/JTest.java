@@ -10,8 +10,17 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.awt.print.Pageable;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,8 +29,70 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import sun.misc.BASE64Decoder;
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
 
 public class JTest {
+    @Test
+    public void getPic() throws IOException {
+        /*String content = new String(Files.readAllBytes(Paths.get("/Users/deepclue/Desktop/pic.txt")));
+        BufferedImage new_image_buffer = base64StringToImg(content);
+        getSubImage(new_image_buffer,5, 41, 67, 67,"/Users/deepclue/Desktop/pic/t1.jpg");
+        getSubImage(new_image_buffer,77, 41, 67, 67,"/Users/deepclue/Desktop/pic/t2.jpg");
+        getSubImage(new_image_buffer,149, 41, 67, 67,"/Users/deepclue/Desktop/pic/t3.jpg");
+        getSubImage(new_image_buffer,221, 41, 67, 67,"/Users/deepclue/Desktop/pic/t4.jpg");
+
+        getSubImage(new_image_buffer,5, 113, 67, 67,"/Users/deepclue/Desktop/pic/b1.jpg");
+        getSubImage(new_image_buffer,77, 113, 67, 67,"/Users/deepclue/Desktop/pic/b2.jpg");
+        getSubImage(new_image_buffer,149, 113, 67, 67,"/Users/deepclue/Desktop/pic/b3.jpg");
+        getSubImage(new_image_buffer,221, 113, 67, 67,"/Users/deepclue/Desktop/pic/b4.jpg");
+
+        getSubImage(new_image_buffer,120, 0, 173, 25,"/Users/deepclue/Desktop/pic/label.jpg");
+
+        File outputFile = new File("/Users/deepclue/Desktop/pic/pic1.jpg");
+
+
+        ImageIO.write(new_image_buffer, "jpg", outputFile);
+*/
+
+        //draw_image(new_image_buffer);
+
+
+    }
+
+    public static void getSubImage(BufferedImage image, int x, int y, int w, int h, String path) throws IOException {
+        ImageIO.write(image.getSubimage(x, y, w, h), "jpg", new File(path));
+    }
+
+    public static void draw_image(BufferedImage image_buffer) throws IOException {
+        ImageIcon icon = new ImageIcon(image_buffer);
+        JFrame frame = new JFrame();
+        frame.setLayout(new FlowLayout());
+
+
+        frame.setSize(image_buffer.getWidth(), image_buffer.getHeight());
+        JLabel lbl = new JLabel();
+        lbl.setIcon(icon);
+        frame.add(lbl);
+        frame.setVisible(true);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+    }
+
+
+
+
+    @Test
+    public void getImage()throws Exception{
+        String url = "https://kyfw.12306.cn/passport/captcha/captcha-image64?login_site=E&module=login&rand=sjrand&1543397049668&callback=jQuery191029187547825656024_1543396921406&_="+new Date().getTime();
+
+
+
+
+    }
+
     @Test
     public void getHtml() throws Exception {
         for (int i = 12; i <= 66; i++) {
@@ -53,7 +124,7 @@ public class JTest {
                     if (StringUtils.isEmpty(text)) {
                         continue;
                     } else {
-                        builder.append(text.replace("　",""));
+                        builder.append(text.replace("　", ""));
                     }
                 }
 
@@ -63,8 +134,8 @@ public class JTest {
                 news.setTitle(title);
                 news.setUrl(url);
 
-                String context = news.getContent().substring(0,news.getContent().indexOf("问："));
-                if (StringUtils.isNotEmpty(context)){
+                String context = news.getContent().substring(0, news.getContent().indexOf("问："));
+                if (StringUtils.isNotEmpty(context)) {
                     news.setContext(context);
                 }
                 needSave.add(news);

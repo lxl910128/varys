@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.hibernate.exception.DataException;
 import org.jsoup.Jsoup;
@@ -26,15 +27,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+import sun.misc.BASE64Decoder;
 
 import javax.annotation.Resource;
+import javax.imageio.ImageIO;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -58,8 +57,8 @@ public class SpriderHandler {
     private static Pattern timeP = Pattern.compile("20[0-9]{2}-[0-9]{2}-[0-9]{2}");
 
 
-    @Resource(name = "httpClientManagerFactoryBean")
-    private CloseableHttpClient client;
+    @Autowired
+    private HttpClientManagerFactoryBean client;
 
     public static final Logger log = LoggerFactory.getLogger(SpriderHandler.class);
 
@@ -102,7 +101,7 @@ public class SpriderHandler {
                 get.setHeader("Referer", "http://www.xinhuanet.com");
                 get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36");
                 try {
-                    CloseableHttpResponse response = client.execute(get);
+                    CloseableHttpResponse response = client.getHttpClient().execute(get);
                     if (response.getStatusLine().getStatusCode() == 200) {
                         String result = EntityUtils.toString(response.getEntity(), "utf-8");
 
@@ -170,7 +169,7 @@ public class SpriderHandler {
                 get.setHeader("Referer", "http://www.xinhuanet.com");
                 get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36");
                 try {
-                    CloseableHttpResponse response = client.execute(get);
+                    CloseableHttpResponse response = client.getHttpClient().execute(get);
                     if (response.getStatusLine().getStatusCode() == 200) {
                         String result = EntityUtils.toString(response.getEntity(), "utf-8");
 
@@ -225,7 +224,7 @@ public class SpriderHandler {
                 get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36");
                 //get.setHeader("Cookie", "wdcid=6550ff071e1722e0; tma=4434860.51068288.1532867142302.1532867142302.1532867142302.1; tmd=1.4434860.51068288.1532867142302.; fingerprint=78461c690986347c3c3400a83e1f74ff; bfd_g=87205254007bf95200005f7b0160a96a5b573e49; pc=e60e67c3e2e2ba368070a8fbdb573ec7.1532442926.1532867392.17");
 
-                CloseableHttpResponse response = client.execute(get);
+                CloseableHttpResponse response = client.getHttpClient().execute(get);
                 NewsType newsType = new NewsType();
 
                 try {
@@ -295,7 +294,7 @@ public class SpriderHandler {
             get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36");
             //get.setHeader("Cookie", "wdcid=6550ff071e1722e0; tma=4434860.51068288.1532867142302.1532867142302.1532867142302.1; tmd=1.4434860.51068288.1532867142302.; fingerprint=78461c690986347c3c3400a83e1f74ff; bfd_g=87205254007bf95200005f7b0160a96a5b573e49; pc=e60e67c3e2e2ba368070a8fbdb573ec7.1532442926.1532867392.17");
 
-            CloseableHttpResponse response = client.execute(get);
+            CloseableHttpResponse response = client.getHttpClient().execute(get);
             if (response.getStatusLine().getStatusCode() == 200) {
                 String result = EntityUtils.toString(response.getEntity(), "utf-8");
                 result = result.substring(1, result.length() - 1);
@@ -352,7 +351,7 @@ public class SpriderHandler {
                 get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36");
                 get.setHeader("Cookie", "wdcid=6550ff071e1722e0; tma=4434860.51068288.1532867142302.1532867142302.1532867142302.1; tmd=1.4434860.51068288.1532867142302.; fingerprint=78461c690986347c3c3400a83e1f74ff; bfd_g=87205254007bf95200005f7b0160a96a5b573e49; pc=e60e67c3e2e2ba368070a8fbdb573ec7.1532442926.1532867392.17");
 
-                CloseableHttpResponse response = client.execute(get);
+                CloseableHttpResponse response = client.getHttpClient().execute(get);
 
                 String result = EntityUtils.toString(response.getEntity(), "utf-8");
                 if (result.contains("\"data\":{\"list\"")) {
@@ -482,7 +481,7 @@ public class SpriderHandler {
 
     private String getContent(String url) throws IOException {
         HttpGet get = new HttpGet(url);
-        CloseableHttpResponse response = this.client.execute(get);
+        CloseableHttpResponse response = this.client.getHttpClient().execute(get);
         return EntityUtils.toString(response.getEntity(), "utf-8");
     }
 
@@ -674,6 +673,37 @@ public class SpriderHandler {
         }
 
 
+    }
+
+    public void getImage() throws Exception {
+        String url = "https://kyfw.12306.cn/passport/captcha/captcha-image64";
+        String format = "/Users/deepclue/Desktop/pic/%s.jpg";
+        HttpGet get = new HttpGet(url);
+        for (int i = 0; i < 100000; i++) {
+            try (CloseableHttpResponse response = client.getHttpClient().execute(get)) {
+                if (response.getStatusLine().getStatusCode() == 200) {
+                    BufferedImage image = base64StringToImg(JSON.parseObject(EntityUtils.toString(response.getEntity(), "utf-8")).getString("image"));
+                    String rName = UUID.randomUUID().toString().replaceFirst("-", "");
+                    ImageIO.write(image, "jpg", new File(String.format(format, rName)));
+                }
+            }
+            Thread.sleep(500);
+            if (i % 1000 == 0) {
+                System.out.println(i);
+            }
+        }
+
+    }
+
+    private BufferedImage base64StringToImg(final String base64String) {
+        try {
+            BASE64Decoder decoder = new BASE64Decoder();
+            byte[] bytes = decoder.decodeBuffer(base64String);
+            ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+            return ImageIO.read(bais);
+        } catch (final IOException ioe) {
+            throw new UncheckedIOException(ioe);
+        }
     }
 
 }
