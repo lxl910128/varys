@@ -39,7 +39,7 @@ public class VarysApplication implements CommandLineRunner {
         //handler.getForeignNews1("wjbzhd", 0, 1);
         //handler.getForeignNews1("wjbxw_673019", 0, 1);
         //handler.getForeignNews1("zyxw", 0, 1);
-        handler.getImage();
+        handler.getWord();
 
     }
 }

@@ -675,6 +675,13 @@ public class SpriderHandler {
 
     }
 
+    public void getWord()throws Exception{
+        File dir = new File("/Users/deepclue/workspace/ocr/pic");
+        for (File f : dir.listFiles()){
+            getSubImage(ImageIO.read(f),120, 0, 55, 25,"/Users/deepclue/workspace/ocr/word/"+f.getName());
+        }
+    }
+
     public void getImage() throws Exception {
         String url = "https://kyfw.12306.cn/passport/captcha/captcha-image64";
         String format = "/Users/deepclue/Desktop/pic/%s.jpg";
@@ -704,6 +711,15 @@ public class SpriderHandler {
         } catch (final IOException ioe) {
             throw new UncheckedIOException(ioe);
         }
+    }
+
+    private  void getSubImage(BufferedImage image, int x, int y, int w, int h, String path) throws IOException {
+        try {
+            ImageIO.write(image.getSubimage(x, y, w, h), "jpg", new File(path));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
     }
 
 }
