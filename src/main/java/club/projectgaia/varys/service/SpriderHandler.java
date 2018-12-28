@@ -675,10 +675,10 @@ public class SpriderHandler {
 
     }
 
-    public void getWord()throws Exception{
+    public void getWord() throws Exception {
         File dir = new File("/Users/deepclue/workspace/ocr/pic");
-        for (File f : dir.listFiles()){
-            getSubImage(ImageIO.read(f),120, 0, 55, 25,"/Users/deepclue/workspace/ocr/word/"+f.getName());
+        for (File f : dir.listFiles()) {
+            getSubImage(ImageIO.read(f), 120, 0, 55, 25, "/Users/deepclue/workspace/ocr/word/" + f.getName());
         }
     }
 
@@ -713,10 +713,10 @@ public class SpriderHandler {
         }
     }
 
-    private  void getSubImage(BufferedImage image, int x, int y, int w, int h, String path) throws IOException {
+    private void getSubImage(BufferedImage image, int x, int y, int w, int h, String path) throws IOException {
         try {
             ImageIO.write(image.getSubimage(x, y, w, h), "jpg", new File(path));
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 

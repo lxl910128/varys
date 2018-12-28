@@ -52,9 +52,7 @@ public class VarysApplicationTests {
         Pageable pageable = PageRequest.of(0, 10);
         while (true) {
             List<NewsDaily> r = newsDailyRepository.findAllByDocIDNotNullOrderByCreateTimeDesc(pageable);
-            System.out.println(r.get(0).getCreateTime().getTime());
-            System.out.println(r.size());
-            pageable = pageable.next();
+
         }
     }
 
