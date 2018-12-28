@@ -23,6 +23,10 @@ public class VarysApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        handler.getType();
+        //world yuqing world news fortune topic sports health english energy mil science finance
+        //legal comments overseas gov gundong reform
+        //handler.getByType("reform");
+        handler.getWhxw();
+        //handler.getAll();
     }
 }

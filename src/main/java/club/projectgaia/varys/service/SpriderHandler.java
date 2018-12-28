@@ -1,8 +1,10 @@
 package club.projectgaia.varys.service;
 
 import club.projectgaia.varys.domain.po.NewsAbstract;
+import club.projectgaia.varys.domain.po.NewsDaily;
 import club.projectgaia.varys.domain.po.NewsType;
 import club.projectgaia.varys.repository.NewsAbstractRepository;
+import club.projectgaia.varys.repository.NewsDailyRepository;
 import club.projectgaia.varys.repository.NewsTypeRepository;
 
 import com.alibaba.fastjson.JSON;
@@ -16,10 +18,17 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.hibernate.exception.DataException;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -29,6 +38,7 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,6 +51,9 @@ public class SpriderHandler {
     @Autowired
     NewsTypeRepository newsTypeRepository;
 
+    @Autowired
+    NewsDailyRepository newsDailyRepository;
+
     @Resource(name = "httpClientManagerFactoryBean")
     private CloseableHttpClient client;
 
@@ -52,6 +65,136 @@ public class SpriderHandler {
         System.out.println(t.indexOf("\"Abstract\":\\"));
         System.out.println(t.replaceFirst("\"Abstract\":\\\\.*}\",", ""));
         JSON.toJSON(t.replaceFirst("\"Abstract\":\\\\.*}\"", ""));
+
+    }
+
+    public void getAll() throws Exception {
+        List<NewsType> allTypes = newsTypeRepository.findAll();
+        String url = "http://qc.wa.news.cn/nodeart/list?nid=%s&pgnum=%d&cnt=%d&orderby=1";
+        Integer cnt = 100;
+        int total = 0;
+        for (NewsType type : allTypes) {
+            Integer count = type.getCount();
+            Integer pgnum = 1;
+            while (count > 0) {
+                List<NewsAbstract> save = new ArrayList<>();
+
+                String trueUrl;
+                if (count < cnt) {
+                    trueUrl = String.format(url, type.getNid(), pgnum, count);
+                    count -= count;
+                } else {
+                    trueUrl = String.format(url, type.getNid(), pgnum, cnt);
+                    count -= cnt;
+                }
+                pgnum++;
+
+                HttpGet get = new HttpGet(trueUrl);
+                get.setHeader("Accept", "*/*");
+                get.setHeader("Accept-Encoding", "gzip, deflate");
+                get.setHeader("Accept-Language", "zh-CN,zh;q=0.9");
+                get.setHeader("Connection", "keep-alive");
+                get.setHeader("Host", "qc.wa.news.cn");
+                get.setHeader("Referer", "http://www.xinhuanet.com");
+                get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36");
+                try {
+                    CloseableHttpResponse response = client.execute(get);
+                    if (response.getStatusLine().getStatusCode() == 200) {
+                        String result = EntityUtils.toString(response.getEntity(), "utf-8");
+
+                        result = result.substring(1, result.length() - 1);
+                        if (result.indexOf("\"Abstract\":\\") > 0) {
+                            result = result.replaceFirst("\"Abstract\":\\\\.*}\",", "");
+                        }
+
+                        JSONObject retJson = JSON.parseObject(result.substring(0, result.length() - 1));
+                        JSONArray newsList = retJson.getJSONObject("data").getJSONArray("list");
+                        for (int s = 0; s < newsList.size(); s++) {
+                            NewsAbstract news = newsList.getObject(s, NewsAbstract.class);
+                            if (newsList.getJSONObject(s).getJSONArray("allPics").size() > 0) {
+                                news.setPics(newsList.getJSONObject(s).getJSONArray("allPics").getString(0));
+                            }
+                            if (StringUtils.isNotEmpty(type.getNewsType())) {
+                                news.setNewsType(type.getNewsType());
+                            }
+                            news.setNid(type.getNid());
+                            save.add(news);
+                            total += 1;
+                            if (total % 5000 == 0) {
+                                log.info(total + "");
+                            }
+                        }
+                        newsAbstractRepository.saveAll(save);
+
+                    }
+                } catch (Exception e) {
+                    log.error(e.getMessage(), e);
+                    log.error(type.getNid() + ":" + pgnum);
+                    break;
+                }
+
+            }
+        }
+    }
+
+    public void getByType(String ntype) throws Exception {
+        String url = "http://qc.wa.news.cn/nodeart/list?nid=%s&pgnum=%d&cnt=%d&orderby=1";
+        Integer cnt = 100;
+        List<NewsType> allTypes = newsTypeRepository.getAllByNewsType(ntype);
+        for (NewsType type : allTypes) {
+            Integer count = type.getCount();
+            Integer pgnum = 1;
+            while (count > 0) {
+                List<NewsAbstract> save = new ArrayList<>();
+
+                String trueUrl;
+                if (count < cnt) {
+                    trueUrl = String.format(url, type.getNid(), pgnum, count);
+                    count -= count;
+                } else {
+                    trueUrl = String.format(url, type.getNid(), pgnum, cnt);
+                    count -= cnt;
+                }
+                pgnum++;
+
+                HttpGet get = new HttpGet(trueUrl);
+                get.setHeader("Accept", "*/*");
+                get.setHeader("Accept-Encoding", "gzip, deflate");
+                get.setHeader("Accept-Language", "zh-CN,zh;q=0.9");
+                get.setHeader("Connection", "keep-alive");
+                get.setHeader("Host", "qc.wa.news.cn");
+                get.setHeader("Referer", "http://www.xinhuanet.com");
+                get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36");
+                try {
+                    CloseableHttpResponse response = client.execute(get);
+                    if (response.getStatusLine().getStatusCode() == 200) {
+                        String result = EntityUtils.toString(response.getEntity(), "utf-8");
+
+                        result = result.substring(1, result.length() - 1);
+                        if (result.indexOf("\"Abstract\":\\") > 0) {
+                            result = result.replaceFirst("\"Abstract\":\\\\.*}\",", "");
+                        }
+
+                        JSONObject retJson = JSON.parseObject(result.substring(0, result.length() - 1));
+                        JSONArray newsList = retJson.getJSONObject("data").getJSONArray("list");
+                        for (int s = 0; s < newsList.size(); s++) {
+                            NewsAbstract news = newsList.getObject(s, NewsAbstract.class);
+                            if (newsList.getJSONObject(s).getJSONArray("allPics").size() > 0) {
+                                news.setPics(newsList.getJSONObject(s).getJSONArray("allPics").getString(0));
+                            }
+                            if (StringUtils.isNotEmpty(type.getNewsType())) {
+                                news.setNewsType(type.getNewsType());
+                            }
+                            save.add(news);
+                        }
+                        newsAbstractRepository.saveAll(save);
+                    }
+                } catch (Exception e) {
+                    log.error(e.getMessage(), e);
+                    break;
+                }
+            }
+        }
 
     }
 
@@ -83,7 +226,7 @@ public class SpriderHandler {
 
                 try {
                     String result = EntityUtils.toString(response.getEntity(), "utf-8");
-                    if (result.indexOf("\"Abstract\":\\")>0){
+                    if (result.indexOf("\"Abstract\":\\") > 0) {
                         result = result.replaceFirst("\"Abstract\":\\\\.*}\",", "");
                     }
                     JSONObject retJson = JSON.parseObject(result.substring(1, result.length() - 1));
@@ -128,10 +271,10 @@ public class SpriderHandler {
 
     }
 
-    public void getNewsAbstract() throws Exception {
+    public void getNewsAbstract(String nid) throws Exception {
         Long stamp = 1533369117247L;
         String newsType = "world";
-        String url = "http://qc.wa.news.cn/nodeart/list?nid=113680&pgnum=%d&cnt=100";
+        String url = "http://qc.wa.news.cn/nodeart/list?nid=" + nid + "&pgnum=%d&cnt=100";
         int i = 0;
         int total = 0;
         while (true) {
@@ -165,7 +308,9 @@ public class SpriderHandler {
                             news.setNewsType(newsType);
                         }
                         total++;
-                        save.add(news);
+                        System.out.printf(news.getTitle());
+
+                        //save.add(news);
                     }
                 } catch (Exception e) {
                     log.error(e.getMessage(), e);
@@ -173,7 +318,7 @@ public class SpriderHandler {
                     break;
                 }
 
-                newsAbstractRepository.saveAll(save);
+                //newsAbstractRepository.saveAll(save);
             }
 
         }
@@ -217,6 +362,38 @@ public class SpriderHandler {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public void getWhxw() throws Exception {
+        Document doc = Jsoup.connect("http://www.xinhuanet.com/whxw.htm").get();
+        Elements hideDataById = doc.select("#hideData");
+        Elements allLi = hideDataById.select(".clearfix");
+
+        List<NewsDaily> needSave = new ArrayList<>();
+        for (Element clearfixli : allLi) {
+            Document clearfixliDoc = Jsoup.parse(clearfixli.toString());
+            Element url = clearfixliDoc.select("a[href]").first();
+            Element time = clearfixliDoc.select("span").first();
+            NewsDaily daily = new NewsDaily();
+            daily.setLinkUrl(url.attributes().get("href"));
+            daily.setTitle(url.text());
+            daily.setTime(time.text());
+            Pattern p = Pattern.compile("20\\d{2}-\\d{2}/\\d{2}/c_(\\d+).htm");
+            Matcher m = p.matcher(url.attributes().get("href"));
+            if (m.find()) {
+                daily.setDocID(m.group(1));
+            } else {
+                daily.setDocID(daily.getLinkUrl());
+            }
+
+            NewsDaily need = newsDailyRepository.findByDocID(daily.getDocID());
+            if (need == null) {
+                needSave.add(daily);
+            }
+        }
+        if (needSave.size() > 0) {
+            newsDailyRepository.saveAll(needSave);
         }
     }
 
