@@ -11,6 +11,7 @@ import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
 import java.awt.print.Pageable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -53,7 +54,7 @@ public class JTest {
                     if (StringUtils.isEmpty(text)) {
                         continue;
                     } else {
-                        builder.append(text.replace("　",""));
+                        builder.append(text.replace("　", ""));
                     }
                 }
 
@@ -63,14 +64,22 @@ public class JTest {
                 news.setTitle(title);
                 news.setUrl(url);
 
-                String context = news.getContent().substring(0,news.getContent().indexOf("问："));
-                if (StringUtils.isNotEmpty(context)){
+                String context = news.getContent().substring(0, news.getContent().indexOf("问："));
+                if (StringUtils.isNotEmpty(context)) {
                     news.setContext(context);
                 }
                 needSave.add(news);
             }
             System.out.println(i);
         }
+    }
+
+    @Test
+    public void testSub() {
+        ByteBuffer b = ByteBuffer.allocate(255);
+        b = b.put("adadsf".getBytes());
+        byte c = b.get();
+        System.out.println(c);
     }
 
 }
