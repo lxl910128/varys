@@ -1,21 +1,16 @@
 package club.projectgaia.varys;
 
 
-import club.projectgaia.varys.domain.po.ForeignNews;
-import com.alibaba.fastjson.JSON;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.util.EntityUtils;
+import club.projectgaia.varys.domain.po.AVInfo;
+import club.projectgaia.varys.domain.po.AVJob;
+import club.projectgaia.varys.domain.po.AvatarInfo;
 import org.junit.Test;
 
-import java.awt.print.Pageable;
-import java.nio.ByteBuffer;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -25,61 +20,64 @@ import org.jsoup.select.Elements;
 public class JTest {
     @Test
     public void getHtml() throws Exception {
-        for (int i = 12; i <= 66; i++) {
-            String defUrl = "http://www.fmprc.gov.cn/web/fyrbt_673021/jzhsl_673025/";
-            Document doc = Jsoup.connect(defUrl + "default_" + i + ".shtml").get();
-            Element urlList = doc.selectFirst("div.rebox_news");
-            Elements allLi = urlList.select("li");
-            List<ForeignNews> needSave = new ArrayList<>();
-            for (Element li : allLi) {
-                Element a = li.selectFirst("a");
-                String title = a.text();
-
-                String time;
-                Matcher m = Pattern.compile("20[0-9]{2}-[0-9]{2}-[0-9]{2}").matcher(li.text());
-                if (m.find()) {
-                    time = m.group(0);
-                } else {
-                    time = "";
-                }
-                String href = a.attr("href");
-                String url = defUrl + href.substring(2, href.length());
-
-                StringBuilder builder = new StringBuilder();
-                Document foreignNew = Jsoup.connect(url).get();
-                Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
-                Elements allP = content.select("p");
-                for (Element p : allP) {
-                    String text = p.text();
-                    if (StringUtils.isEmpty(text)) {
-                        continue;
-                    } else {
-                        builder.append(text.replace("　", ""));
-                    }
-                }
-
-                ForeignNews news = new ForeignNews();
-                news.setContent(builder.toString());
-                news.setTime(time);
-                news.setTitle(title);
-                news.setUrl(url);
-
-                String context = news.getContent().substring(0, news.getContent().indexOf("问："));
-                if (StringUtils.isNotEmpty(context)) {
-                    news.setContext(context);
-                }
-                needSave.add(news);
-            }
-            System.out.println(i);
-        }
+        //File in = new File("H:\\text.javbus");
+        File in = new File("H:\\javbus_test.mp");
+        Document doc = Jsoup.parse(in, "UTF-8");
+        System.out.println(doc.outerHtml());
     }
 
     @Test
-    public void testSub() {
-        ByteBuffer b = ByteBuffer.allocate(255);
-        b = b.put("adadsf".getBytes());
-        byte c = b.get();
-        System.out.println(c);
+    public void testSub() throws IOException {
+        //File in = new File("H:\\text.javbus");
+        File in = new File("H:\\javbus_test.mp");
+        AVInfo infoPO = new AVInfo();
+        Document doc = Jsoup.parse(in, "UTF-8");
+        // head
+        Element head = doc.selectFirst("head");
+        String title = head.selectFirst("title").text().replace(" - JavBus", "");
+        infoPO.setTitle(title);
+        infoPO.setKeyword(head.select("meta[name=keywords]").attr("content"));
+        Elements info = doc.selectFirst("div.col-md-3").select("p");
+        info.forEach(x -> {
+            if (x.text().contains("識別碼")) {
+                infoPO.setAvId(x.select("span").get(1).text());
+                return;
+            }
+        });
+        infoPO.setPic(doc.selectFirst("a.bigImage").attr("href"));
+        Element avatar = doc.selectFirst("div#avatar-waterfall");
+        if (avatar != null) {
+            AvatarInfo avatarInfo = new AvatarInfo();
+
+            avatarInfo.setUrl(avatar.selectFirst("a.avatar-box").attr("href"));
+            avatarInfo.setPic(avatar.selectFirst("img").attr("src"));
+            avatarInfo.setName(avatar.selectFirst("span").text());
+            //TODO
+            infoPO.setAvatarName(avatarInfo.getName());
+        } else {
+            infoPO.setAvatarName(title.split(" ")[title.split(" ").length - 1]);
+        }
+
+        Elements samples = doc.select("div#sample-waterfall > a.sample-box");
+        if (samples != null) {
+            List<String> sample = new ArrayList<>();
+            samples.forEach(x -> {
+                sample.add(x.attr("href"));
+            });
+            infoPO.setSamplePics(String.join(",", sample));
+        }
+
+        Elements related = doc.select("div#related-waterfall > a.movie-box");
+        if (related != null) {
+            related.forEach(x -> {
+                AVJob newJob = new AVJob();
+                newJob.setTitle(x.attr("title"));
+                newJob.setUrl(x.attr("href"));
+                //TODO
+            });
+        }
+
+        //TODO
     }
 
 }
