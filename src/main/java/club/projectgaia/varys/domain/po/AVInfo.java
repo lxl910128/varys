@@ -16,7 +16,7 @@ public class AVInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 128)
+    @Column(length = 256)
     private String title;
 
     @Column

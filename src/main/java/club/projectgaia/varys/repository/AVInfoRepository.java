@@ -8,4 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * Created by magneto on 2018/8/12.
  */
 public interface AVInfoRepository extends JpaRepository<AVInfo, Long> {
+    Boolean existsAVInfoByAvId(String avId);
 }

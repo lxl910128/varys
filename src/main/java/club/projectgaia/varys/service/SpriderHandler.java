@@ -55,6 +55,14 @@ public class SpriderHandler {
     @Autowired
     ForeignNewsRepository foreignNewsRepository;
 
+
+    @Autowired
+    private AVInfoRepository avInfoRepositoryDAO;
+    @Autowired
+    private AVJobRepository avJobRepositoryDAO;
+    @Autowired
+    private AvatarInfoRepository avatarInfoDAO;
+
     private static Pattern p = Pattern.compile("来源：(.*)</span>");
     private static Pattern timeP = Pattern.compile("20[0-9]{2}-[0-9]{2}-[0-9]{2}");
 
@@ -487,6 +495,29 @@ public class SpriderHandler {
         return EntityUtils.toString(response.getEntity(), "utf-8");
     }
 
+    public void getAVIndex(String formatStr, int start, int end) {
+        for (int i = start; i < end; i++) {
+            try {
+                Document doc = Jsoup.parse(getContent(String.format(formatStr, i + "")));
+                Elements urlDiv = doc.select("div.item");
+                urlDiv.forEach(x -> {
+                    AVJob newJob = new AVJob();
+                    newJob.setTitle(x.selectFirst("a.movie-box > div.photo-frame > img").attr("title"));
+                    newJob.setUrl(x.selectFirst("a.movie-box").attr("href"));
+
+                    if (!avJobRepositoryDAO.existsAVJobByUrl(newJob.getUrl())) {
+                        avJobRepositoryDAO.save(newJob);
+                    }
+                });
+
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                log.warn("爬取网页失败", e);
+            }
+
+        }
+    }
+
     public void getForeignNews(String key, int start, int end) throws Exception {
         //jzhsl_673025 dhdw_673027 wjbzhd
         String defUrl = "https://www.fmprc.gov.cn/web/fyrbt_673021/" + key + "/";
@@ -662,6 +693,7 @@ public class SpriderHandler {
             }
         }
     }
+
 
     private void getTodayVegetable(String secUrl, File file) throws Exception {
         try (FileWriter writer = new FileWriter(file)) {
