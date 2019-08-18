@@ -27,6 +27,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+
 import sun.misc.BASE64Decoder;
 
 import javax.annotation.Resource;
@@ -675,9 +676,25 @@ public class SpriderHandler {
 
     }
 
+    public void deleteImage() throws Exception {
+        File dir = new File("/home/magneto/data/pic/");
+        int total = 0;
+        for (File f : dir.listFiles()) {
+            if (f.length() == 2365) {
+                f.deleteOnExit();
+            } else {
+                total++;
+                if (total % 1000 == 0) {
+                    System.out.println(total);
+                }
+            }
+        }
+        System.out.println("end !" + total);
+    }
+
     public void getImage() throws Exception {
         String url = "https://kyfw.12306.cn/passport/captcha/captcha-image64";
-        String format = "/Users/deepclue/Desktop/pic/%s.jpg";
+        String format = "/home/magneto/data/pic/%s.jpg";
         HttpGet get = new HttpGet(url);
         for (int i = 0; i < 100000; i++) {
             try (CloseableHttpResponse response = client.getHttpClient().execute(get)) {
