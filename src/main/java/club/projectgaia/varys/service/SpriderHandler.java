@@ -576,7 +576,11 @@ public class SpriderHandler {
 
                         infoPO.setAvatarName(avatarInfo.getName());
                     } else {
-                        infoPO.setAvatarName(title.split(" ")[title.split(" ").length - 1]);
+                        String[] splitName = title.split(" ");
+                        if (splitName.length >= 3 && splitName[splitName.length - 1].length() < 32) {
+                            infoPO.setAvatarName(splitName[splitName.length - 1]);
+                        }
+
                     }
 
                     Elements samples = doc.select("div#sample-waterfall > a.sample-box");
@@ -616,6 +620,20 @@ public class SpriderHandler {
             p.next();
         }
         log.info("本批次任务共完成{}次，共新增任务{}个，演员{}个", endJob.get(), newJobCount.get(), newAvatar.get());
+    }
+
+    public void updateAvatarName() {
+        List<AVInfo> all = avInfoRepositoryDAO.findAll();
+        all.forEach(x -> {
+            if (x.getAvatarName().length() > 4 || x.getAvatarName().length() < 3) {
+                x.setAvatarName(null);
+                String[] splitName = x.getAvatarName().split(" ");
+                if (splitName.length >= 3 && splitName[splitName.length - 1].length() < 32) {
+                    x.setAvatarName(splitName[splitName.length - 1]);
+                }
+                avInfoRepositoryDAO.save(x);
+            }
+        });
     }
 
     public void getForeignNews(String key, int start, int end) throws Exception {
