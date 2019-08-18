@@ -1,9 +1,17 @@
 package club.projectgaia.varys.domain.po;
 
-import lombok.Data;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
+
+import lombok.Data;
 
 @Data
 @Entity
@@ -21,4 +29,7 @@ public class AVJob {
 
     @Column(length = 128)
     private String url;
+
+    @Column(length = 32)
+    private String type;
 }

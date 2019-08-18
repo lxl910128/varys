@@ -1,20 +1,15 @@
 package club.projectgaia.varys.service;
 
-import club.projectgaia.varys.domain.po.*;
-import club.projectgaia.varys.repository.*;
-
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
-import org.hibernate.exception.DataException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -23,12 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
-
-import javax.annotation.Resource;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -36,9 +29,31 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.annotation.Resource;
+
+import club.projectgaia.varys.domain.po.AVInfo;
+import club.projectgaia.varys.domain.po.AVJob;
+import club.projectgaia.varys.domain.po.AvatarInfo;
+import club.projectgaia.varys.domain.po.ForeignNews;
+import club.projectgaia.varys.domain.po.NewsAbstract;
+import club.projectgaia.varys.domain.po.NewsContent;
+import club.projectgaia.varys.domain.po.NewsDaily;
+import club.projectgaia.varys.domain.po.NewsType;
+import club.projectgaia.varys.repository.AVInfoRepository;
+import club.projectgaia.varys.repository.AVJobRepository;
+import club.projectgaia.varys.repository.AvatarInfoRepository;
+import club.projectgaia.varys.repository.ForeignNewsRepository;
+import club.projectgaia.varys.repository.NewsAbstractRepository;
+import club.projectgaia.varys.repository.NewsContentRepository;
+import club.projectgaia.varys.repository.NewsDailyRepository;
+import club.projectgaia.varys.repository.NewsTypeRepository;
 
 @Component
 public class SpriderHandler {
@@ -495,7 +510,7 @@ public class SpriderHandler {
         return EntityUtils.toString(response.getEntity(), "utf-8");
     }
 
-    public void getAVIndex(String formatStr, int start, int end) {
+    public void getAVIndex(String formatStr, int start, int end, String type) {
         for (int i = start; i < end; i++) {
             try {
                 Document doc = Jsoup.parse(getContent(String.format(formatStr, i + "")));
@@ -504,18 +519,103 @@ public class SpriderHandler {
                     AVJob newJob = new AVJob();
                     newJob.setTitle(x.selectFirst("a.movie-box > div.photo-frame > img").attr("title"));
                     newJob.setUrl(x.selectFirst("a.movie-box").attr("href"));
-
+                    newJob.setType(type);
                     if (!avJobRepositoryDAO.existsAVJobByUrl(newJob.getUrl())) {
                         avJobRepositoryDAO.save(newJob);
+                    } else {
+                        log.info("发现重复url停止任务！{}", newJob.getUrl());
+                        return;
                     }
                 });
-
+                log.info("爬取{}目录第{}页结束！", type, i);
                 Thread.sleep(1000);
             } catch (Exception e) {
                 log.warn("爬取网页失败", e);
             }
 
         }
+    }
+
+    public void getAVDetailInfo() {
+        log.info("开始1000次查询");
+        Sort sort = new Sort(Sort.Direction.ASC, "id");
+        Pageable p = PageRequest.of(0, 100, sort);
+        AtomicInteger newJobCount = new AtomicInteger();
+        AtomicInteger newAvatar = new AtomicInteger();
+        AtomicInteger endJob = new AtomicInteger();
+        for (int i = 0; i < 10; i++) {
+            avJobRepositoryDAO.findAll(p).forEach(job -> {
+                try {
+                    AVInfo infoPO = new AVInfo();
+                    Document doc = Jsoup.parse(getContent(job.getUrl()));
+                    // head
+                    Element head = doc.selectFirst("head");
+                    String title = head.selectFirst("title").text().replace(" - JavBus", "");
+                    infoPO.setTitle(title);
+                    infoPO.setKeyword(head.select("meta[name=keywords]").attr("content"));
+                    Elements info = doc.selectFirst("div.col-md-3").select("p");
+                    info.forEach(x -> {
+                        if (x.text().contains("識別碼")) {
+                            infoPO.setAvId(x.select("span").get(1).text());
+                            return;
+                        }
+                    });
+                    infoPO.setPic(doc.selectFirst("a.bigImage").attr("href"));
+                    Element avatar = doc.selectFirst("div#avatar-waterfall");
+                    if (avatar != null) {
+                        AvatarInfo avatarInfo = new AvatarInfo();
+
+                        avatarInfo.setUrl(avatar.selectFirst("a.avatar-box").attr("href"));
+                        avatarInfo.setPic(avatar.selectFirst("img").attr("src"));
+                        avatarInfo.setName(avatar.selectFirst("span").text());
+
+                        if (!avatarInfoDAO.existsAvatarInfoByName(avatarInfo.getName())) {
+                            avatarInfoDAO.save(avatarInfo);
+                            newAvatar.getAndIncrement();
+                        }
+
+                        infoPO.setAvatarName(avatarInfo.getName());
+                    } else {
+                        infoPO.setAvatarName(title.split(" ")[title.split(" ").length - 1]);
+                    }
+
+                    Elements samples = doc.select("div#sample-waterfall > a.sample-box");
+                    if (samples != null) {
+                        List<String> sample = new ArrayList<>();
+                        samples.forEach(x -> {
+                            sample.add(x.attr("href"));
+                        });
+                        infoPO.setSamplePics(String.join(",", sample));
+                    }
+
+                    Elements related = doc.select("div#related-waterfall > a.movie-box");
+                    if (related != null) {
+                        related.forEach(x -> {
+                            AVJob newJob = new AVJob();
+                            newJob.setTitle(x.attr("title"));
+                            newJob.setUrl(x.attr("href"));
+
+                            if (!avJobRepositoryDAO.existsAVJobByUrl(newJob.getUrl())) {
+                                avJobRepositoryDAO.save(newJob);
+                                newJobCount.getAndIncrement();
+                            }
+                        });
+                    }
+
+                    if (!avInfoRepositoryDAO.existsAVInfoByAvId(infoPO.getAvId())) {
+                        avInfoRepositoryDAO.save(infoPO);
+                        avJobRepositoryDAO.delete(job);
+                        endJob.getAndIncrement();
+                    }
+                    log.info("完成:{}", infoPO.getAvId());
+                    Thread.sleep(500);
+                } catch (Exception e) {
+                    log.info("获取详细信息失败！{}", job.getUrl());
+                }
+            });
+            p.next();
+        }
+        log.info("本批次任务共完成{}次，共新增任务{}个，演员{}个", endJob.get(), newJobCount.get(), newAvatar.get());
     }
 
     public void getForeignNews(String key, int start, int end) throws Exception {

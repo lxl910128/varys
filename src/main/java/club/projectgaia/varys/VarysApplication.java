@@ -1,7 +1,5 @@
 package club.projectgaia.varys;
 
-import club.projectgaia.varys.service.SpriderHandler;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +7,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+
+import club.projectgaia.varys.service.SpriderHandler;
 
 
 @SpringBootApplication
@@ -41,8 +41,10 @@ public class VarysApplication implements CommandLineRunner {
         handler.getForeignNews1("zyxw", 0, 1);*/
 
         // -----v3
-        handler.getAVIndex("https://www.javbus.com/page/%s", 1, 51);
-        handler.getAVIndex("https://www.javbus.com/uncensored/page/%s", 1, 51);
+        //handler.getAVIndex("https://www.javbus.com/page/%s", 1, 150, "骑兵");
+        //handler.getAVIndex("https://www.javbus.com/uncensored/page/%s", 1, 150, "步兵");
+        // -----v4
+        handler.getAVDetailInfo();
 
     }
 }
