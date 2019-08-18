@@ -128,17 +128,6 @@ public class JTest {
                     }
                 }
 
-                ForeignNews news = new ForeignNews();
-                news.setContent(builder.toString());
-                news.setTime(time);
-                news.setTitle(title);
-                news.setUrl(url);
-
-                String context = news.getContent().substring(0, news.getContent().indexOf("问："));
-                if (StringUtils.isNotEmpty(context)) {
-                    news.setContext(context);
-                }
-                needSave.add(news);
             }
             System.out.println(i);
         }
