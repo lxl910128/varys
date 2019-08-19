@@ -558,6 +558,10 @@ public class SpriderHandler {
                     String title = head.selectFirst("title").text().replace(" - JavBus", "");
                     infoPO.setTitle(title);
                     infoPO.setKeyword(head.select("meta[name=keywords]").attr("content"));
+                    if (doc.selectFirst("div.col-md-3") == null) {
+                        log.info("任务地址错误！{}", job.getUrl());
+                        return;
+                    }
                     Elements info = doc.selectFirst("div.col-md-3").select("p");
                     info.forEach(x -> {
                         if (infoPO.getAvId() != null && infoPO.getIssueDate() != null) {
@@ -591,7 +595,11 @@ public class SpriderHandler {
                             }
                         });
 
-                        infoPO.setAvatarName(String.join(",", allAvatar));
+                        if (allAvatar.size() > 5) {
+                            infoPO.setAvatarName(String.join(",", allAvatar.subList(0, 4)));
+                        } else {
+                            infoPO.setAvatarName(String.join(",", allAvatar));
+                        }
                     } else {
                         String[] splitName = title.split(" ");
                         if (splitName.length >= 3) {

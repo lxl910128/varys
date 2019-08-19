@@ -1,5 +1,6 @@
 package club.projectgaia.varys;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -16,6 +17,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.Resource;
 
@@ -46,13 +49,10 @@ public class VarysApplicationTests {
     private AvatarInfoRepository avatarInfoDAO;
 
     @Test
-    public void testIndex() throws Exception {
-    }
-
-    @Test
     public void test() throws Exception {
-        //File in = new File("H:\\text.javbus");
-        File in = new File("H:\\javbus_test.mp");
+        Pattern pName = Pattern.compile("([\u4e00-\u9fa5,\u0800-\u4e00]+)");
+        File in = new File("/home/magneto/workspace/varys/error.log");
+
         AVInfo infoPO = new AVInfo();
         Document doc = Jsoup.parse(in, "UTF-8");
         // head
@@ -62,29 +62,51 @@ public class VarysApplicationTests {
         infoPO.setKeyword(head.select("meta[name=keywords]").attr("content"));
         Elements info = doc.selectFirst("div.col-md-3").select("p");
         info.forEach(x -> {
-            if (x.text().contains("識別碼")) {
-                infoPO.setAvId(x.select("span").get(1).text());
+            if (infoPO.getAvId() != null && infoPO.getIssueDate() != null) {
                 return;
             }
+            if (x.text().contains("識別碼")) {
+                infoPO.setAvId(x.select("span").get(1).text());
+            }
+            if (x.text().contains("發行日期")) {
+                String date = x.text().replace("發行日期", "").replace(":", "").replace(" ", "");
+                if (StringUtils.isNotBlank(date)) {
+                    infoPO.setIssueDate(date);
+                }
+            }
         });
+
         infoPO.setPic(doc.selectFirst("a.bigImage").attr("href"));
         Element avatar = doc.selectFirst("div#avatar-waterfall");
         if (avatar != null) {
-            AvatarInfo avatarInfo = new AvatarInfo();
+            List<String> allAvatar = new ArrayList<>();
+            avatar.select("a.avatar-box").forEach(x -> {
+                AvatarInfo avatarInfo = new AvatarInfo();
 
-            avatarInfo.setUrl(avatar.selectFirst("a.avatar-box").attr("href"));
-            avatarInfo.setPic(avatar.selectFirst("img").attr("src"));
-            avatarInfo.setName(avatar.selectFirst("span").text());
+                avatarInfo.setUrl(x.attr("href"));
+                avatarInfo.setPic(x.selectFirst("img").attr("src"));
+                avatarInfo.setName(x.selectFirst("span").text());
+                allAvatar.add(x.selectFirst("span").text());
+                if (!avatarInfoDAO.existsAvatarInfoByName(avatarInfo.getName())) {
+                    avatarInfoDAO.save(avatarInfo);
+                }
+            });
 
-            if (!avatarInfoDAO.existsAvatarInfoByName(avatarInfo.getName())) {
-                avatarInfoDAO.save(avatarInfo);
-            }
-
-            infoPO.setAvatarName(avatarInfo.getName());
+            infoPO.setAvatarName(String.join(",", allAvatar));
         } else {
-            infoPO.setAvatarName(title.split(" ")[title.split(" ").length - 1]);
+            String[] splitName = title.split(" ");
+            if (splitName.length >= 3) {
+                String name = splitName[splitName.length - 1];
+                Matcher matcher = pName.matcher(name);
+                String str = "";
+                while (matcher.find()) {
+                    str += matcher.group(0);
+                }
+                if (str.length() >= 2 && str.length() <= 6) {
+                    infoPO.setAvatarName(str);
+                }
+            }
         }
-
 
         Elements samples = doc.select("div#sample-waterfall > a.sample-box");
         if (samples != null) {
@@ -101,16 +123,17 @@ public class VarysApplicationTests {
                 AVJob newJob = new AVJob();
                 newJob.setTitle(x.attr("title"));
                 newJob.setUrl(x.attr("href"));
-
                 if (!avJobRepositoryDAO.existsAVJobByUrl(newJob.getUrl())) {
-                    avJobRepositoryDAO.save(newJob);
+                    avJobRepositoryDAO.saveAndFlush(newJob);
                 }
             });
         }
 
-        if (!avInfoRepositoryDAO.existsAVInfoByAvId(infoPO.getAvId())) {
+        if (StringUtils.isNotBlank(infoPO.getAvId()) && !avInfoRepositoryDAO.existsAVInfoByAvId(infoPO.getAvId())) {
             avInfoRepositoryDAO.save(infoPO);
         }
+        //log.info("完成:{}", infoPO.getAvId());
+        Thread.sleep(500);
     }
 
 

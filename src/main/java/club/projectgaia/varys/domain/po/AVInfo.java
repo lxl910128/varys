@@ -46,7 +46,7 @@ public class AVInfo {
     @Column(length = 128)
     private String pic;
 
-    @Column(length = 64)
+    @Column
     private String avatarName;
 
 
