@@ -12,6 +12,7 @@ import javax.persistence.EntityListeners;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -23,6 +24,7 @@ import lombok.Data;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "av_info",
+        indexes = @Index(name = "avId", columnList = "avId"),
         uniqueConstraints = @UniqueConstraint(columnNames = {"avId"}))
 public class AVInfo {
     @Id

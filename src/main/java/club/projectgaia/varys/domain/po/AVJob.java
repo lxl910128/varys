@@ -8,6 +8,7 @@ import javax.persistence.EntityListeners;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
@@ -17,7 +18,9 @@ import lombok.Data;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "av_job",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"url"}))
+        indexes = {@Index(name = "url", columnList = "url"), @Index(name = "deleteFlag", columnList = "deleteFlag")},
+        uniqueConstraints = @UniqueConstraint(columnNames = {"url"})
+)
 public class AVJob {
 
     @Id
@@ -32,4 +35,7 @@ public class AVJob {
 
     @Column(length = 32)
     private String type;
+
+    @Column
+    private Boolean deleteFlag;
 }

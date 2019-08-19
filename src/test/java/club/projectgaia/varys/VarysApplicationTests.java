@@ -1,9 +1,5 @@
 package club.projectgaia.varys;
 
-import club.projectgaia.varys.domain.po.*;
-import club.projectgaia.varys.repository.*;
-
-
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -22,6 +18,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.annotation.Resource;
+
+import club.projectgaia.varys.domain.po.AVInfo;
+import club.projectgaia.varys.domain.po.AVJob;
+import club.projectgaia.varys.domain.po.AvatarInfo;
+import club.projectgaia.varys.domain.po.NewsDaily;
+import club.projectgaia.varys.repository.AVInfoRepository;
+import club.projectgaia.varys.repository.AVJobRepository;
+import club.projectgaia.varys.repository.AvatarInfoRepository;
+import club.projectgaia.varys.repository.NewsDailyRepository;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -42,14 +47,6 @@ public class VarysApplicationTests {
 
     @Test
     public void testIndex() throws Exception {
-        File in = new File("/home/magneto/workspace/varys/tmp");
-        Document doc = Jsoup.parse(in, "UTF-8");
-        Elements info = doc.selectFirst("div.col-md-3").select("p");
-        info.forEach(x -> {
-            if (x.text().contains("發行日期")) {
-                System.out.println(x.text());
-            }
-        });
     }
 
     @Test

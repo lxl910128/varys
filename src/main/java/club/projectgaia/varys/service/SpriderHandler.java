@@ -547,8 +547,9 @@ public class SpriderHandler {
         AtomicInteger newJobCount = new AtomicInteger();
         AtomicInteger newAvatar = new AtomicInteger();
         AtomicInteger endJob = new AtomicInteger();
+        AtomicInteger re = new AtomicInteger();
         for (int i = 0; i < 10; i++) {
-            avJobRepositoryDAO.findAll(p).forEach(job -> {
+            avJobRepositoryDAO.findAllByDeleteFlagIsNull(p).forEach(job -> {
                 try {
                     AVInfo infoPO = new AVInfo();
                     Document doc = Jsoup.parse(getContent(job.getUrl()));
@@ -576,18 +577,21 @@ public class SpriderHandler {
                     infoPO.setPic(doc.selectFirst("a.bigImage").attr("href"));
                     Element avatar = doc.selectFirst("div#avatar-waterfall");
                     if (avatar != null) {
-                        AvatarInfo avatarInfo = new AvatarInfo();
+                        List<String> allAvatar = new ArrayList<>();
+                        avatar.select("a.avatar-box").forEach(x -> {
+                            AvatarInfo avatarInfo = new AvatarInfo();
 
-                        avatarInfo.setUrl(avatar.selectFirst("a.avatar-box").attr("href"));
-                        avatarInfo.setPic(avatar.selectFirst("img").attr("src"));
-                        avatarInfo.setName(avatar.selectFirst("span").text());
+                            avatarInfo.setUrl(x.attr("href"));
+                            avatarInfo.setPic(x.selectFirst("img").attr("src"));
+                            avatarInfo.setName(x.selectFirst("span").text());
+                            allAvatar.add(x.selectFirst("span").text());
+                            if (!avatarInfoDAO.existsAvatarInfoByName(avatarInfo.getName())) {
+                                avatarInfoDAO.save(avatarInfo);
+                                newAvatar.getAndIncrement();
+                            }
+                        });
 
-                        if (!avatarInfoDAO.existsAvatarInfoByName(avatarInfo.getName())) {
-                            avatarInfoDAO.save(avatarInfo);
-                            newAvatar.getAndIncrement();
-                        }
-
-                        infoPO.setAvatarName(avatarInfo.getName());
+                        infoPO.setAvatarName(String.join(",", allAvatar));
                     } else {
                         String[] splitName = title.split(" ");
                         if (splitName.length >= 3) {
@@ -618,9 +622,8 @@ public class SpriderHandler {
                             AVJob newJob = new AVJob();
                             newJob.setTitle(x.attr("title"));
                             newJob.setUrl(x.attr("href"));
-
                             if (!avJobRepositoryDAO.existsAVJobByUrl(newJob.getUrl())) {
-                                avJobRepositoryDAO.save(newJob);
+                                avJobRepositoryDAO.saveAndFlush(newJob);
                                 newJobCount.getAndIncrement();
                             }
                         });
@@ -628,9 +631,12 @@ public class SpriderHandler {
 
                     if (StringUtils.isNotBlank(infoPO.getAvId()) && !avInfoRepositoryDAO.existsAVInfoByAvId(infoPO.getAvId())) {
                         avInfoRepositoryDAO.save(infoPO);
-                        avJobRepositoryDAO.deleteById(job.getId());
                         endJob.getAndIncrement();
+                    } else {
+                        re.getAndIncrement();
                     }
+                    job.setDeleteFlag(true);
+                    avJobRepositoryDAO.saveAndFlush(job);
                     //log.info("完成:{}", infoPO.getAvId());
                     Thread.sleep(500);
                 } catch (Exception e) {
@@ -639,7 +645,7 @@ public class SpriderHandler {
             });
             log.info("完成{}次，新增任务{}个，演员{}个", endJob.get(), newJobCount.get(), newAvatar.get());
         }
-        log.info("本批次任务共完成{}次，共新增任务{}个，演员{}个", endJob.get(), newJobCount.get(), newAvatar.get());
+        log.info("本批次任务共完成{}次，共新增任务{}个，演员{}个，发现重复任务{}个", endJob.get(), newJobCount.get(), newAvatar.get(), re.get());
     }
 
 
@@ -797,29 +803,37 @@ public class SpriderHandler {
     public void fixNullIssueDate() {
         Sort sort = new Sort(Sort.Direction.ASC, "id");
         Pageable p = PageRequest.of(0, 100, sort);
-        Page<AVInfo> all = avInfoRepositoryDAO.findByIssueDateIsNull(p);
-        for (int i = 0; i < 40; i++) {
+        int i = 0;
+        while (true) {
+            Page<AVInfo> all = avInfoRepositoryDAO.findByIssueDateIsNull(p);
             all.forEach(y -> {
                 try {
                     Document doc = Jsoup.parse(getContent(String.format("https://www.javbus.com/%s", y.getAvId())));
                     Elements info = doc.selectFirst("div.col-md-3").select("p");
-                    info.forEach(x -> {
+                    for (int i1 = 0; i1 < info.size(); i1++) {
+                        Element x = info.get(i1);
                         if (x.text().contains("發行日期")) {
                             String date = x.text().replace("發行日期", "").replace(":", "").replace(" ", "");
                             if (StringUtils.isNotBlank(date)) {
                                 y.setIssueDate(date);
                                 avInfoRepositoryDAO.saveAndFlush(y);
                                 log.info("fix {}", y.getAvId());
-                                return;
+                                break;
                             }
                         }
-                    });
+                    }
 
                 } catch (Exception e) {
                     log.error("获取详细信息失败！" + y.getAvId(), e);
                 }
             });
-            log.info("fix {}", (i + 1) * 100);
+            if (all.hasNext()) {
+                p = p.next();
+                i++;
+            } else {
+                log.info("查无退出,共遍历{}次", i);
+                break;
+            }
         }
     }
 
