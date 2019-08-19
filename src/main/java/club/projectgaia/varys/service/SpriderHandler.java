@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -791,6 +792,35 @@ public class SpriderHandler {
             }
         }
         System.out.println(key + " end");
+    }
+
+    public void fixNullIssueDate() {
+        Sort sort = new Sort(Sort.Direction.ASC, "id");
+        Pageable p = PageRequest.of(0, 100, sort);
+        Page<AVInfo> all = avInfoRepositoryDAO.findByIssueDateIsNull(p);
+        for (int i = 0; i < 40; i++) {
+            all.forEach(y -> {
+                try {
+                    Document doc = Jsoup.parse(getContent(String.format("https://www.javbus.com/%s", y.getAvId())));
+                    Elements info = doc.selectFirst("div.col-md-3").select("p");
+                    info.forEach(x -> {
+                        if (x.text().contains("發行日期")) {
+                            String date = x.text().replace("發行日期", "").replace(":", "").replace(" ", "");
+                            if (StringUtils.isNotBlank(date)) {
+                                y.setIssueDate(date);
+                                avInfoRepositoryDAO.saveAndFlush(y);
+                                log.info("fix {}", y.getAvId());
+                                return;
+                            }
+                        }
+                    });
+
+                } catch (Exception e) {
+                    log.error("获取详细信息失败！" + y.getAvId(), e);
+                }
+            });
+            log.info("fix {}", (i + 1) * 100);
+        }
     }
 
     public void getVegetable(int start, int end) throws Exception {
