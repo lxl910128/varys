@@ -41,9 +41,8 @@ public class VarysApplication implements CommandLineRunner {
         handler.getForeignNews1("zyxw", 0, 1);*/
 
         // -----v3
-        //handler.getAVIndex("https://www.javbus.com/page/%s", 1, 150, "骑兵");
-        //handler.getAVIndex("https://www.javbus.com/uncensored/page/%s", 1, 150, "步兵");
-        // -----v4
+        handler.getAVIndex("https://www.javbus.com/page/%s", 1, 10, "骑兵");
+        handler.getAVIndex("https://www.javbus.com/uncensored/page/%s", 1, 10, "步兵");
         handler.getAVDetailInfo();
 
     }

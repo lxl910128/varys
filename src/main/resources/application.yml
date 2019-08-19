@@ -25,10 +25,10 @@ spring:
     url: jdbc:mysql://172.96.222.112:3306/varys?characterEncoding=utf-8
     #url: jdbc:mysql://176.122.176.71:3306/varys?characterEncoding=utf-8
     type: com.alibaba.druid.pool.DruidDataSource
-    #username: root
-    #password: 12cf0d30
-    username: test
-    password: test
+    username: root
+    password: 12cf0d30
+    #username: test
+    #password: test
     driver-class-name: com.mysql.jdbc.Driver
   jpa:
     hibernate:

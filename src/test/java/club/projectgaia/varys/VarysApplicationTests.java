@@ -42,16 +42,12 @@ public class VarysApplicationTests {
 
     @Test
     public void testIndex() throws Exception {
-        File in = new File("H:\\index.tmp");
+        File in = new File("/home/magneto/workspace/varys/tmp");
         Document doc = Jsoup.parse(in, "UTF-8");
-        Elements urlDiv = doc.select("div.item");
-        urlDiv.forEach(x -> {
-            AVJob newJob = new AVJob();
-            newJob.setTitle(x.selectFirst("a.movie-box > div.photo-frame > img").attr("title"));
-            newJob.setUrl(x.selectFirst("a.movie-box").attr("href"));
-
-            if (!avJobRepositoryDAO.existsAVJobByUrl(newJob.getUrl())) {
-                avJobRepositoryDAO.save(newJob);
+        Elements info = doc.selectFirst("div.col-md-3").select("p");
+        info.forEach(x -> {
+            if (x.text().contains("發行日期")) {
+                System.out.println(x.text());
             }
         });
     }

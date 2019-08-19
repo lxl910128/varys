@@ -81,7 +81,7 @@ public class SpriderHandler {
     private static Pattern p = Pattern.compile("来源：(.*)</span>");
     private static Pattern timeP = Pattern.compile("20[0-9]{2}-[0-9]{2}-[0-9]{2}");
 
-
+    private static Pattern pName = Pattern.compile("([\u4e00-\u9fa5,\u0800-\u4e00]+)");
     @Resource(name = "httpClientManagerFactoryBean")
     private CloseableHttpClient client;
 
@@ -511,22 +511,25 @@ public class SpriderHandler {
     }
 
     public void getAVIndex(String formatStr, int start, int end, String type) {
+        AtomicInteger count = new AtomicInteger();
         for (int i = start; i < end; i++) {
             try {
                 Document doc = Jsoup.parse(getContent(String.format(formatStr, i + "")));
                 Elements urlDiv = doc.select("div.item");
-                urlDiv.forEach(x -> {
+                for (int indexNum = 0; indexNum < urlDiv.size(); indexNum++) {
+                    Element x = urlDiv.get(indexNum);
                     AVJob newJob = new AVJob();
                     newJob.setTitle(x.selectFirst("a.movie-box > div.photo-frame > img").attr("title"));
                     newJob.setUrl(x.selectFirst("a.movie-box").attr("href"));
                     newJob.setType(type);
                     if (!avJobRepositoryDAO.existsAVJobByUrl(newJob.getUrl())) {
                         avJobRepositoryDAO.save(newJob);
+                        count.getAndIncrement();
                     } else {
-                        log.info("发现重复url停止任务！{}", newJob.getUrl());
+                        log.info("此次新增{}个{}任务，发现重复url停止任务！", count.get(), type, newJob.getUrl());
                         return;
                     }
-                });
+                }
                 log.info("爬取{}目录第{}页结束！", type, i);
                 Thread.sleep(1000);
             } catch (Exception e) {
@@ -555,11 +558,20 @@ public class SpriderHandler {
                     infoPO.setKeyword(head.select("meta[name=keywords]").attr("content"));
                     Elements info = doc.selectFirst("div.col-md-3").select("p");
                     info.forEach(x -> {
-                        if (x.text().contains("識別碼")) {
-                            infoPO.setAvId(x.select("span").get(1).text());
+                        if (infoPO.getAvId() != null && infoPO.getIssueDate() != null) {
                             return;
                         }
+                        if (x.text().contains("識別碼")) {
+                            infoPO.setAvId(x.select("span").get(1).text());
+                        }
+                        if (x.text().contains("發行日期")) {
+                            String date = x.text().replace("發行日期", "").replace(":", "").replace(" ", "");
+                            if (StringUtils.isNotBlank(date)) {
+                                infoPO.setIssueDate(date);
+                            }
+                        }
                     });
+
                     infoPO.setPic(doc.selectFirst("a.bigImage").attr("href"));
                     Element avatar = doc.selectFirst("div#avatar-waterfall");
                     if (avatar != null) {
@@ -577,10 +589,17 @@ public class SpriderHandler {
                         infoPO.setAvatarName(avatarInfo.getName());
                     } else {
                         String[] splitName = title.split(" ");
-                        if (splitName.length >= 3 && splitName[splitName.length - 1].length() < 32) {
-                            infoPO.setAvatarName(splitName[splitName.length - 1]);
+                        if (splitName.length >= 3) {
+                            String name = splitName[splitName.length - 1];
+                            Matcher matcher = pName.matcher(name);
+                            String str = "";
+                            while (matcher.find()) {
+                                str += matcher.group(0);
+                            }
+                            if (str.length() >= 2 && str.length() <= 6) {
+                                infoPO.setAvatarName(str);
+                            }
                         }
-
                     }
 
                     Elements samples = doc.select("div#sample-waterfall > a.sample-box");
@@ -606,35 +625,22 @@ public class SpriderHandler {
                         });
                     }
 
-                    if (!avInfoRepositoryDAO.existsAVInfoByAvId(infoPO.getAvId())) {
+                    if (StringUtils.isNotBlank(infoPO.getAvId()) && !avInfoRepositoryDAO.existsAVInfoByAvId(infoPO.getAvId())) {
                         avInfoRepositoryDAO.save(infoPO);
-                        avJobRepositoryDAO.delete(job);
+                        avJobRepositoryDAO.deleteById(job.getId());
                         endJob.getAndIncrement();
                     }
-                    log.info("完成:{}", infoPO.getAvId());
+                    //log.info("完成:{}", infoPO.getAvId());
                     Thread.sleep(500);
                 } catch (Exception e) {
-                    log.info("获取详细信息失败！{}", job.getUrl());
+                    log.error("获取详细信息失败！" + job.getUrl(), e);
                 }
             });
-            p.next();
+            log.info("完成{}次，新增任务{}个，演员{}个", endJob.get(), newJobCount.get(), newAvatar.get());
         }
         log.info("本批次任务共完成{}次，共新增任务{}个，演员{}个", endJob.get(), newJobCount.get(), newAvatar.get());
     }
 
-    public void updateAvatarName() {
-        List<AVInfo> all = avInfoRepositoryDAO.findAll();
-        all.forEach(x -> {
-            if (x.getAvatarName().length() > 4 || x.getAvatarName().length() < 3) {
-                x.setAvatarName(null);
-                String[] splitName = x.getAvatarName().split(" ");
-                if (splitName.length >= 3 && splitName[splitName.length - 1].length() < 32) {
-                    x.setAvatarName(splitName[splitName.length - 1]);
-                }
-                avInfoRepositoryDAO.save(x);
-            }
-        });
-    }
 
     public void getForeignNews(String key, int start, int end) throws Exception {
         //jzhsl_673025 dhdw_673027 wjbzhd
