@@ -540,6 +540,60 @@ public class SpriderHandler {
         }
     }
 
+    public void createJobByAvatar() {
+        Sort sort = new Sort(Sort.Direction.ASC, "id");
+        Pageable p = PageRequest.of(0, 100, sort);
+        AtomicInteger newJobCount = new AtomicInteger();
+        for (int i = 0; i < 10; i++) {
+            avatarInfoDAO.findAllByCrawFlagIsNull(p).forEach(x -> {
+                try {
+                    handleAvatar(Jsoup.parse(getContent(x.getUrl())), newJobCount);
+                    x.setCrawFlag(true);
+                    avatarInfoDAO.save(x);
+
+                } catch (Exception e) {
+                    log.error("根据演员生成任务失败！", e);
+                }
+
+                log.info("处理{}完成，目前新增任务:{}", x.getName(), newJobCount.get());
+            });
+        }
+
+    }
+
+    private void handleAvatar(Document doc, AtomicInteger newJobCount) throws IOException {
+        Elements waterfalls = doc.select("div#waterfall");
+        Element all = waterfalls.get(1);
+
+        if (all != null) {
+            Elements newJobElement = all.select("div.item");
+            newJobElement.forEach(x -> {
+                Element y = x.selectFirst("a.movie-box");
+                if (y != null) {
+                    AVJob newJob = new AVJob();
+                    newJob.setUrl(y.attr("href"));
+                    newJob.setTitle(y.selectFirst("div.photo-info").text());
+                    if (!avJobRepositoryDAO.existsAVJobByUrl(newJob.getUrl())) {
+                        avJobRepositoryDAO.saveAndFlush(newJob);
+                        newJobCount.getAndIncrement();
+                    }
+                }
+            });
+        }
+        Element next = doc.selectFirst("ul.pagination");
+        if (next != null) {
+            Element nextP = next.selectFirst("a#next");
+            if (nextP != null) {
+                String nextPage = String.format("https://www.javbus.com%s", nextP.attr("href"));
+                try {
+                    handleAvatar(Jsoup.parse(getContent(nextPage)), newJobCount);
+                } catch (Exception e) {
+                    log.error("根据演员生成任务失败！", e);
+                }
+            }
+        }
+    }
+
     public void getAVDetailInfo() {
         log.info("开始1000次查询");
         Sort sort = new Sort(Sort.Direction.ASC, "id");

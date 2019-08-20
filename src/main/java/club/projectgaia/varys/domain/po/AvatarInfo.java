@@ -26,4 +26,7 @@ public class AvatarInfo {
     @Column(length = 128)
     private String url;
 
+    @Column
+    private Boolean crawFlag;
+
 }
