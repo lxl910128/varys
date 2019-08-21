@@ -544,21 +544,19 @@ public class SpriderHandler {
         Sort sort = new Sort(Sort.Direction.ASC, "id");
         Pageable p = PageRequest.of(0, 100, sort);
         AtomicInteger newJobCount = new AtomicInteger();
-        for (int i = 0; i < 10; i++) {
-            avatarInfoDAO.findAllByCrawFlagIsNull(p).forEach(x -> {
-                try {
-                    handleAvatar(Jsoup.parse(getContent(x.getUrl())), newJobCount);
-                    x.setCrawFlag(true);
-                    avatarInfoDAO.save(x);
+        //for (int i = 0; i < 10; i++) {
+        avatarInfoDAO.findAllByCrawFlagIsNull(p).forEach(x -> {
+            try {
+                handleAvatar(Jsoup.parse(getContent(x.getUrl())), newJobCount);
+                x.setCrawFlag(true);
+                avatarInfoDAO.save(x);
 
-                } catch (Exception e) {
-                    log.error("根据演员生成任务失败！", e);
-                }
-
-                log.info("处理{}完成，目前新增任务:{}", x.getName(), newJobCount.get());
-            });
-        }
-
+            } catch (Exception e) {
+                log.error("根据演员生成任务失败！", e);
+            }
+            log.info("处理{}完成，目前新增任务:{}", x.getName(), newJobCount.get());
+        });
+        //}
     }
 
     private void handleAvatar(Document doc, AtomicInteger newJobCount) throws IOException {
