@@ -16,7 +16,7 @@ apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
 group = 'club.projectgaia'
-version = 'javbus-SNAPSHOT'
+version = 'fix-SNAPSHOT'
 sourceCompatibility = 1.8
 
 repositories {

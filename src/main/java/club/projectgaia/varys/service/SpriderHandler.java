@@ -6,9 +6,11 @@ import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.Header;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -511,11 +513,18 @@ public class SpriderHandler {
         return EntityUtils.toString(response.getEntity(), "utf-8");
     }
 
+    private String getContent(String url, Header header) throws IOException {
+        HttpGet get = new HttpGet(url);
+        get.setHeader(header);
+        CloseableHttpResponse response = this.client.execute(get);
+        return EntityUtils.toString(response.getEntity(), "utf-8");
+    }
+
     public void getAVIndex(String formatStr, int start, int end, String type) {
         AtomicInteger count = new AtomicInteger();
         for (int i = start; i < end; i++) {
             try {
-                Document doc = Jsoup.parse(getContent(String.format(formatStr, i + "")));
+                Document doc = Jsoup.parse(getContent(String.format(formatStr, i + ""), new BasicHeader("Cookie", "existmag=all")));
                 Elements urlDiv = doc.select("div.item");
                 for (int indexNum = 0; indexNum < urlDiv.size(); indexNum++) {
                     Element x = urlDiv.get(indexNum);
@@ -523,16 +532,17 @@ public class SpriderHandler {
                     newJob.setTitle(x.selectFirst("a.movie-box > div.photo-frame > img").attr("title"));
                     newJob.setUrl(x.selectFirst("a.movie-box").attr("href"));
                     newJob.setType(type);
+                    //log.info(newJob.getUrl());
                     if (!avJobRepositoryDAO.existsAVJobByUrl(newJob.getUrl())) {
                         avJobRepositoryDAO.save(newJob);
                         count.getAndIncrement();
-                    } else {
+                    } /*else {
                         log.info("此次新增{}个{}任务，发现重复url停止任务！", count.get(), type, newJob.getUrl());
                         return;
-                    }
+                    }*/
                 }
-                log.info("爬取{}目录第{}页结束！", type, i);
-                Thread.sleep(1000);
+                log.info("爬取{}目录第{}页结束！增加{}条", type, i, count.get());
+                Thread.sleep(300);
             } catch (Exception e) {
                 log.warn("爬取网页失败", e);
             }
