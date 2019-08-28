@@ -9,9 +9,14 @@ import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.protocol.HTTP;
+import org.apache.http.util.Args;
 import org.apache.http.util.EntityUtils;
 import org.hibernate.exception.DataException;
 import org.jsoup.Jsoup;
@@ -29,12 +34,9 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -53,6 +55,9 @@ public class SpriderHandler {
     NewsContentRepository newsContentRepository;
     @Autowired
     ForeignNewsRepository foreignNewsRepository;
+
+    @Autowired
+    LianJiaJobRepository lianJiaJobRepository;
 
     private static Pattern p = Pattern.compile("来源：(.*)</span>");
     private static Pattern timeP = Pattern.compile("20[0-9]{2}-[0-9]{2}-[0-9]{2}");
@@ -674,6 +679,82 @@ public class SpriderHandler {
         }
 
 
+    }
+
+    public void cramLJ(String url, String type) {
+        HttpGet httpGet = new HttpGet(url);
+        httpGet.setHeader(new BasicHeader("user-agent", "Mozilla/5.0 (compatible; varysSpider/1.0; +http://www.baidu.com/search/spider.html)"));
+        try {
+            CloseableHttpResponse response = this.client.execute(httpGet);
+            HttpEntity entity = response.getEntity();
+            if (response != null) {
+                Args.check(entity.getContentLength() <= Integer.MAX_VALUE,
+                        "HTTP entity too large to be buffered in memory");
+                Charset charset = getCharset(entity);
+                int i = 0;
+                try (final InputStream instream = entity.getContent();
+                     final Reader reader = new InputStreamReader(instream, charset);
+                     BufferedReader bf = new BufferedReader(reader)) {
+                    LianJiaJob job = null;
+                    String str;
+                    while ((str = bf.readLine()) != null) {
+                        if ("<url>".equals(str)) {
+                            job = new LianJiaJob();
+                            job.setType(type);
+                            job.setCramFlag(false);
+                        } else if (str.startsWith("<loc>")) {
+                            job.setUrl(str.replace("<loc>", "").replace("</loc>", ""));
+                        } else if (str.startsWith("<lastmod>")) {
+                            job.setLastmod(str.replace("<lastmod>", "").replace("</lastmod>", ""));
+                        } else if ("</url>".equals(str)) {
+                            if (!lianJiaJobRepository.existsByUrl(job.getUrl())) {
+                                lianJiaJobRepository.saveAndFlush(job);
+                            }
+                        }
+                        i++;
+                        if (i % 100 == 0) {
+                            log.info("爬取job{}个", i);
+                            Thread.sleep(300);
+                        }
+                    }
+
+                }
+
+            }
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+
+    }
+
+    private Charset getCharset(HttpEntity entity) {
+        ContentType contentType = null;
+        try {
+            contentType = ContentType.get(entity);
+        } catch (final UnsupportedCharsetException ex) {
+            log.error(ex.getMessage(), ex);
+        }
+        if (contentType != null) {
+            if (contentType.getCharset() == null) {
+                contentType = contentType.withCharset("utf-8");
+            }
+        } else {
+            contentType = ContentType.DEFAULT_TEXT.withCharset("utf-8");
+        }
+
+        Charset charset = null;
+        if (contentType != null) {
+            charset = contentType.getCharset();
+            if (charset == null) {
+                final ContentType defaultContentType = ContentType.getByMimeType(contentType.getMimeType());
+                charset = defaultContentType != null ? defaultContentType.getCharset() : null;
+            }
+        }
+        if (charset == null) {
+            charset = HTTP.DEF_CONTENT_CHARSET;
+        }
+        return charset;
     }
 
 }

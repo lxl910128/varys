@@ -1,17 +1,26 @@
 package club.projectgaia.varys;
 
 
-import club.projectgaia.varys.domain.po.ForeignNews;
-import com.alibaba.fastjson.JSON;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.entity.ContentType;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.protocol.HTTP;
+import org.apache.http.util.Args;
+import org.apache.http.util.CharArrayBuffer;
 import org.apache.http.util.EntityUtils;
+import org.jsoup.Connection;
 import org.junit.Test;
 
 import java.awt.print.Pageable;
+import java.io.*;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -23,56 +32,77 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 public class JTest {
+
     @Test
-    public void getHtml() throws Exception {
-        for (int i = 12; i <= 66; i++) {
-            String defUrl = "http://www.fmprc.gov.cn/web/fyrbt_673021/jzhsl_673025/";
-            Document doc = Jsoup.connect(defUrl + "default_" + i + ".shtml").get();
-            Element urlList = doc.selectFirst("div.rebox_news");
-            Elements allLi = urlList.select("li");
-            List<ForeignNews> needSave = new ArrayList<>();
-            for (Element li : allLi) {
-                Element a = li.selectFirst("a");
-                String title = a.text();
+    public void getLianjia() throws Exception {
+        //创建httpClient实例
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        //创建httpGet实例
+        HttpGet httpGet = new HttpGet("https://bj.lianjia.com/sitemap/bj_xq1.xml");
+        httpGet.setHeader(new BasicHeader("user-agent","Mozilla/5.0 (compatible; varysSpider/1.0; +http://www.baidu.com/search/spider.html)"));
+        CloseableHttpResponse response = httpClient.execute(httpGet);
 
-                String time;
-                Matcher m = Pattern.compile("20[0-9]{2}-[0-9]{2}-[0-9]{2}").matcher(li.text());
-                if (m.find()) {
-                    time = m.group(0);
-                } else {
-                    time = "";
+        HttpEntity entity = response.getEntity();
+        if (response != null) {
+            ContentType contentType = null;
+            try {
+                contentType = ContentType.get(entity);
+            } catch (final UnsupportedCharsetException ex) {
+
+            }
+            if (contentType != null) {
+                if (contentType.getCharset() == null) {
+                    contentType = contentType.withCharset("utf-8");
                 }
-                String href = a.attr("href");
-                String url = defUrl + href.substring(2, href.length());
+            } else {
+                contentType = ContentType.DEFAULT_TEXT.withCharset("utf-8");
+            }
 
-                StringBuilder builder = new StringBuilder();
-                Document foreignNew = Jsoup.connect(url).get();
-                Element content = foreignNew.selectFirst("div#News_Body_Txt_A");
-                Elements allP = content.select("p");
-                for (Element p : allP) {
-                    String text = p.text();
-                    if (StringUtils.isEmpty(text)) {
-                        continue;
-                    } else {
-                        builder.append(text.replace("　", ""));
+            final InputStream instream = entity.getContent();
+            try {
+                Args.check(entity.getContentLength() <= Integer.MAX_VALUE,
+                        "HTTP entity too large to be buffered in memory");
+                int capacity = (int) entity.getContentLength();
+                if (capacity < 0) {
+                    capacity = 4096;
+                }
+                Charset charset = null;
+                if (contentType != null) {
+                    charset = contentType.getCharset();
+                    if (charset == null) {
+                        final ContentType defaultContentType = ContentType.getByMimeType(contentType.getMimeType());
+                        charset = defaultContentType != null ? defaultContentType.getCharset() : null;
                     }
                 }
-
-                ForeignNews news = new ForeignNews();
-                news.setContent(builder.toString());
-                news.setTime(time);
-                news.setTitle(title);
-                news.setUrl(url);
-
-                String context = news.getContent().substring(0, news.getContent().indexOf("问："));
-                if (StringUtils.isNotEmpty(context)) {
-                    news.setContext(context);
+                if (charset == null) {
+                    charset = HTTP.DEF_CONTENT_CHARSET;
                 }
-                needSave.add(news);
+                final Reader reader = new InputStreamReader(instream, charset);
+                BufferedReader bf = new BufferedReader(reader);
+                String str;
+                // 按行读取字符串
+                while ((str = bf.readLine()) != null) {
+                    System.out.println(str);
+                }
+
+                bf.close();
+                reader.close();
+
+            } catch (IOException E) {
+
+            } finally {
+                instream.close();
             }
-            System.out.println(i);
+
+        }
+        if (response != null) {
+            response.close();
+        }
+        if (httpClient != null) {
+            httpClient.close();
         }
     }
+
 
     @Test
     public void testSub() {
