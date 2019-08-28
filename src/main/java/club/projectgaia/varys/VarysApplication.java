@@ -47,7 +47,8 @@ public class VarysApplication implements CommandLineRunner {
         handler.getAVDetailInfo();
 
         // ----fix
-        //handler.createJobByAvatar();
+        //handler.getAVIndex("https://www.javbus.com/page/%s", 1, 100, "骑兵");
+        //handler.getAVIndex("https://www.javbus.com/uncensored/page/%s", 1, 100, "步兵");
 
     }
 }

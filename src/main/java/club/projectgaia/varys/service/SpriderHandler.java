@@ -532,17 +532,17 @@ public class SpriderHandler {
                     newJob.setTitle(x.selectFirst("a.movie-box > div.photo-frame > img").attr("title"));
                     newJob.setUrl(x.selectFirst("a.movie-box").attr("href"));
                     newJob.setType(type);
-                    log.info(newJob.getUrl());
+                    //log.info(newJob.getUrl());
                     if (!avJobRepositoryDAO.existsAVJobByUrl(newJob.getUrl())) {
                         avJobRepositoryDAO.save(newJob);
                         count.getAndIncrement();
-                    } else {
+                    } /*else {
                         log.info("此次新增{}个{}任务，发现重复url停止任务！", count.get(), type, newJob.getUrl());
                         return;
-                    }
+                    }*/
                 }
-                log.info("爬取{}目录第{}页结束！", type, i);
-                Thread.sleep(1000);
+                log.info("爬取{}目录第{}页结束！增加{}条", type, i, count.get());
+                Thread.sleep(300);
             } catch (Exception e) {
                 log.warn("爬取网页失败", e);
             }
@@ -552,15 +552,15 @@ public class SpriderHandler {
 
     public void createJobByAvatar() {
         Sort sort = new Sort(Sort.Direction.ASC, "id");
-        Pageable p = PageRequest.of(0, 300, sort);
+        Pageable p = PageRequest.of(0, 100, sort);
         AtomicInteger newJobCount = new AtomicInteger();
-        //for (int i = 0; i < 35; i++) {
+        //for (int i = 0; i < 10; i++) {
         avatarInfoDAO.findAllByCrawFlagIsNull(p).forEach(x -> {
             try {
                 handleAvatar(Jsoup.parse(getContent(x.getUrl(), new BasicHeader("Cookie", "existmag=all"))), newJobCount);
                 x.setCrawFlag(true);
                 avatarInfoDAO.save(x);
-                //Thread.sleep(300);
+
             } catch (Exception e) {
                 log.error("根据演员生成任务失败！", e);
             }
