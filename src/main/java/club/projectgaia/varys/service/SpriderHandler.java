@@ -6,9 +6,11 @@ import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.Header;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -511,11 +513,18 @@ public class SpriderHandler {
         return EntityUtils.toString(response.getEntity(), "utf-8");
     }
 
+    private String getContent(String url, Header header) throws IOException {
+        HttpGet get = new HttpGet(url);
+        get.addHeader(header);
+        CloseableHttpResponse response = this.client.execute(get);
+        return EntityUtils.toString(response.getEntity(), "utf-8");
+    }
+
     public void getAVIndex(String formatStr, int start, int end, String type) {
         AtomicInteger count = new AtomicInteger();
         for (int i = start; i < end; i++) {
             try {
-                Document doc = Jsoup.parse(getContent(String.format(formatStr, i + "")));
+                Document doc = Jsoup.parse(getContent(String.format(formatStr, i + ""), new BasicHeader("Cookie", "existmag=all")));
                 Elements urlDiv = doc.select("div.item");
                 for (int indexNum = 0; indexNum < urlDiv.size(); indexNum++) {
                     Element x = urlDiv.get(indexNum);
@@ -523,6 +532,7 @@ public class SpriderHandler {
                     newJob.setTitle(x.selectFirst("a.movie-box > div.photo-frame > img").attr("title"));
                     newJob.setUrl(x.selectFirst("a.movie-box").attr("href"));
                     newJob.setType(type);
+                    log.info(newJob.getUrl());
                     if (!avJobRepositoryDAO.existsAVJobByUrl(newJob.getUrl())) {
                         avJobRepositoryDAO.save(newJob);
                         count.getAndIncrement();
@@ -542,15 +552,15 @@ public class SpriderHandler {
 
     public void createJobByAvatar() {
         Sort sort = new Sort(Sort.Direction.ASC, "id");
-        Pageable p = PageRequest.of(0, 100, sort);
+        Pageable p = PageRequest.of(0, 300, sort);
         AtomicInteger newJobCount = new AtomicInteger();
-        //for (int i = 0; i < 10; i++) {
+        //for (int i = 0; i < 35; i++) {
         avatarInfoDAO.findAllByCrawFlagIsNull(p).forEach(x -> {
             try {
-                handleAvatar(Jsoup.parse(getContent(x.getUrl())), newJobCount);
+                handleAvatar(Jsoup.parse(getContent(x.getUrl(), new BasicHeader("Cookie", "existmag=all"))), newJobCount);
                 x.setCrawFlag(true);
                 avatarInfoDAO.save(x);
-
+                //Thread.sleep(300);
             } catch (Exception e) {
                 log.error("根据演员生成任务失败！", e);
             }
@@ -584,7 +594,7 @@ public class SpriderHandler {
             if (nextP != null) {
                 String nextPage = String.format("https://www.javbus.com%s", nextP.attr("href"));
                 try {
-                    handleAvatar(Jsoup.parse(getContent(nextPage)), newJobCount);
+                    handleAvatar(Jsoup.parse(getContent(nextPage, new BasicHeader("Cookie", "existmag=all"))), newJobCount);
                 } catch (Exception e) {
                     log.error("根据演员生成任务失败！", e);
                 }

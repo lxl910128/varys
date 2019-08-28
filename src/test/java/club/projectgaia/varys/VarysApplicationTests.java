@@ -1,7 +1,14 @@
 package club.projectgaia.varys;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.Header;
+import org.apache.http.HttpHost;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -15,8 +22,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,6 +56,49 @@ public class VarysApplicationTests {
     private AVJobRepository avJobRepositoryDAO;
     @Autowired
     private AvatarInfoRepository avatarInfoDAO;
+
+    @Test
+    public void testAll() throws IOException {
+        AtomicInteger newJobCount = new AtomicInteger();
+        Document doc = Jsoup.parse(getContent("https://www.javbus.com/star/7z0", new BasicHeader("cookies", "existmag=all")));
+        handleAvatar(doc, newJobCount);
+        System.out.println(newJobCount.get());
+    }
+
+    private void handleAvatar(Document doc, AtomicInteger newJobCount) throws IOException {
+        Elements waterfalls = doc.select("div#waterfall");
+        Element all = waterfalls.get(1);
+
+        if (all != null) {
+            Elements newJobElement = all.select("div.item");
+            newJobElement.forEach(x -> {
+                Element y = x.selectFirst("a.movie-box");
+                if (y != null) {
+                    System.out.println(y.attr("href"));
+                    newJobCount.getAndIncrement();
+                }
+            });
+        }
+        Element next = doc.selectFirst("ul.pagination");
+        if (next != null) {
+            Element nextP = next.selectFirst("a#next");
+            if (nextP != null) {
+                String nextPage = String.format("https://www.javbus.com%s", nextP.attr("href"));
+                try {
+                    handleAvatar(Jsoup.parse(getContent(nextPage, new BasicHeader("cookies", "existmag=all"))), newJobCount);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private String getContent(String url, Header header) throws IOException {
+        HttpGet get = new HttpGet(url);
+        get.addHeader(header);
+        CloseableHttpResponse response = this.client.execute(get);
+        return EntityUtils.toString(response.getEntity(), "utf-8");
+    }
 
     @Test
     public void test() throws Exception {
