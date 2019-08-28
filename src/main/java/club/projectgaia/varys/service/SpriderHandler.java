@@ -557,7 +557,7 @@ public class SpriderHandler {
         //for (int i = 0; i < 10; i++) {
         avatarInfoDAO.findAllByCrawFlagIsNull(p).forEach(x -> {
             try {
-                handleAvatar(Jsoup.parse(getContent(x.getUrl())), newJobCount);
+                handleAvatar(Jsoup.parse(getContent(x.getUrl(), new BasicHeader("Cookie", "existmag=all"))), newJobCount);
                 x.setCrawFlag(true);
                 avatarInfoDAO.save(x);
 
@@ -594,7 +594,7 @@ public class SpriderHandler {
             if (nextP != null) {
                 String nextPage = String.format("https://www.javbus.com%s", nextP.attr("href"));
                 try {
-                    handleAvatar(Jsoup.parse(getContent(nextPage)), newJobCount);
+                    handleAvatar(Jsoup.parse(getContent(nextPage, new BasicHeader("Cookie", "existmag=all"))), newJobCount);
                 } catch (Exception e) {
                     log.error("根据演员生成任务失败！", e);
                 }
