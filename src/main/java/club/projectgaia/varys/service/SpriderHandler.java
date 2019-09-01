@@ -18,7 +18,6 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.Args;
 import org.apache.http.util.EntityUtils;
-import org.hibernate.exception.DataException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -27,9 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -38,6 +37,7 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -53,6 +53,8 @@ public class SpriderHandler {
     NewsDailyRepository newsDailyRepository;
     @Autowired
     NewsContentRepository newsContentRepository;
+    @Autowired
+    LianJiaCommunityRepository lianJiaCommunity;
     @Autowired
     ForeignNewsRepository foreignNewsRepository;
 
@@ -755,6 +757,129 @@ public class SpriderHandler {
             charset = HTTP.DEF_CONTENT_CHARSET;
         }
         return charset;
+    }
+
+    public void createCommunity() {
+        Random r = new Random();
+        Pageable pageable = PageRequest.of(0, 100, Sort.by("id"));
+        List<LianJiaJob> allJob = lianJiaJobRepository.getAllByCramFlagFalse(pageable);
+        AtomicInteger i = new AtomicInteger();
+        while (true) {
+            allJob.forEach(x -> {
+                try {
+                    Document doc = Jsoup.parse(getContent(x.getUrl()));
+                    LianJiaCommunity community = makeCommunity(doc, x.getUrl());
+                    if (!lianJiaCommunity.existsByCid(community.getCid())) {
+                        lianJiaCommunity.save(community);
+                        x.setCramFlag(true);
+                        lianJiaJobRepository.saveAndFlush(x);
+                    }
+                    Thread.sleep((r.nextInt(3) + 1) * 1000);
+                } catch (Exception e) {
+                    log.error("爬取" + x.getUrl() + "失败！", e);
+                    x.setCramFlag(null);
+                    lianJiaJobRepository.saveAndFlush(x);
+                }
+                i.getAndIncrement();
+
+            });
+            allJob = lianJiaJobRepository.getAllByCramFlagFalse(pageable);
+            if (allJob.size() == 0) {
+                break;
+            }
+            if (i.get() % 100 == 0) {
+                log.info("爬取{}个", i.get());
+            }
+           /* if (i.get() == 3000) {
+                break;
+            }*/
+
+        }
+    }
+
+    private LianJiaCommunity makeCommunity(Document doc, String url) throws Exception {
+        LianJiaCommunity ret = new LianJiaCommunity();
+
+        ret.setCid(getIntegerStringFromString(url));
+        ret.setRemark(doc.selectFirst("head > meta[name=description]").attr("content"));
+        ret.setName(doc.selectFirst("h1.detailTitle").text());
+        Element priceElement = doc.selectFirst("span.xiaoquUnitPrice");
+        if (priceElement != null) {
+            try {
+                ret.setPrice(Integer.valueOf(priceElement.text()));
+                ret.setPriceDesc(doc.selectFirst("span.xiaoquUnitPriceDesc").text());
+            } catch (NumberFormatException e) {
+            }
+        }
+        Element infoElement = doc.selectFirst("div.xiaoquInfo");
+        if (infoElement != null) {
+            Elements infos = infoElement.select("div.xiaoquInfoItem");
+            infos.forEach(x -> {
+                String key = x.selectFirst("span.xiaoquInfoLabel").text();
+                String value = x.selectFirst("span.xiaoquInfoContent").text();
+                if ("建筑年代".equals(key) && !"暂无信息".equals(value)) {
+                    ret.setBuildAge(getIntegerStringFromString(value));
+                } else if ("建筑类型".equals(key) && !"未知类型".equals(value)) {
+                    ret.setBuildType(value);
+                } else if ("物业费用".equals(key) && !"暂无信息".equals(value)) {
+                    ret.setPropertyCost(value);
+                } else if ("物业公司".equals(key) && !"暂无信息".equals(value)) {
+                    ret.setPropertyCompany(value);
+                } else if ("开发商".equals(key) && !"暂无信息".equals(value)) {
+                    ret.setDevelopers(value);
+                }
+            });
+        }
+
+        Elements addr = doc.selectFirst("div.xiaoquDetailbreadCrumbs").select("a");
+        ret.setCity(addr.get(1).text().replace("小区", ""));
+        ret.setDistrict(addr.get(2).text().replace("小区", ""));
+        ret.setArea(addr.get(3).text());
+
+        Elements scripts = doc.select("script[type=text/javascript]");
+        scripts.forEach(x -> {
+            String geo = getGeo(x.toString());
+            if (geo != null) {
+                String[] lonLat = geo.split(",");
+                ret.setLon(Double.valueOf(lonLat[0]));
+                ret.setLat(Double.valueOf(lonLat[1]));
+            }
+        });
+        StringBuilder qa = new StringBuilder();
+        Elements qas = doc.select("div.resblockQAItemContent");
+        qas.forEach(x -> {
+            qa.append("问：");
+            qa.append(x.selectFirst("div.resblockQAItemTitle").text());
+            qa.append("?");
+            qa.append("答：");
+            qa.append(x.selectFirst("div.resblockQAItemMainContent").text());
+            qa.append("\n");
+        });
+        if (qa.length() > 0) {
+            ret.setQa(qa.toString());
+        }
+        return ret;
+    }
+
+    private String getGeo(String text) {
+        try {
+            String regEx = "resblockPosition: *'(.+)'";
+            Pattern p = Pattern.compile(regEx);
+            Matcher m = p.matcher(text);
+            if (m.find()) {
+                return m.group(1);
+            }
+        } catch (Exception e) {
+
+        }
+        return null;
+    }
+
+    private String getIntegerStringFromString(String str) {
+        String regEx = "[^0-9]";
+        Pattern p = Pattern.compile(regEx);
+        Matcher m = p.matcher(str);
+        return m.replaceAll("").trim();
     }
 
 }
