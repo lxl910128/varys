@@ -30,6 +30,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
+import club.projectgaia.varys.domain.po.NewsType;
 
 import javax.annotation.Resource;
 
@@ -44,22 +45,22 @@ import java.util.regex.Pattern;
 @Component
 public class SpriderHandler {
     @Autowired
-    NewsAbstractRepository newsAbstractRepository;
+    private NewsAbstractRepository newsAbstractRepository;
 
     @Autowired
-    NewsTypeRepository newsTypeRepository;
+    private NewsTypeRepository newsTypeRepository;
 
     @Autowired
-    NewsDailyRepository newsDailyRepository;
+    private NewsDailyRepository newsDailyRepository;
     @Autowired
-    NewsContentRepository newsContentRepository;
+    private NewsContentRepository newsContentRepository;
     @Autowired
-    LianJiaCommunityRepository lianJiaCommunity;
+    private LianJiaCommunityRepository lianJiaCommunity;
     @Autowired
-    ForeignNewsRepository foreignNewsRepository;
+    private ForeignNewsRepository foreignNewsRepository;
 
     @Autowired
-    LianJiaJobRepository lianJiaJobRepository;
+    private LianJiaJobRepository lianJiaJobRepository;
 
     private static Pattern p = Pattern.compile("来源：(.*)</span>");
     private static Pattern timeP = Pattern.compile("20[0-9]{2}-[0-9]{2}-[0-9]{2}");
@@ -711,13 +712,15 @@ public class SpriderHandler {
                         } else if ("</url>".equals(str)) {
                             if (!lianJiaJobRepository.existsByUrl(job.getUrl())) {
                                 lianJiaJobRepository.saveAndFlush(job);
+                            } else {
+                                log.info("url重复:{}", job.getUrl());
+                            }
+                            i++;
+                            if (i % 100 == 0) {
+                                log.info("爬取job{}个", i);
                             }
                         }
-                        i++;
-                        if (i % 100 == 0) {
-                            log.info("爬取job{}个", i);
-                            Thread.sleep(300);
-                        }
+
                     }
 
                 }

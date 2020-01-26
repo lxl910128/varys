@@ -15,8 +15,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 @EnableJpaAuditing
 public class VarysApplication implements CommandLineRunner {
 
-    private static final Logger log = LoggerFactory.getLogger(VarysApplication.class);
-
     @Autowired
     SpriderHandler handler;
 
@@ -42,11 +40,11 @@ public class VarysApplication implements CommandLineRunner {
 
         handler.cramLJ("https://bj.lianjia.com/sitemap/bj_xq1.xml", "小区");
 
-        handler.cramLJ("https://bj.lianjia.com/sitemap/bj_esf1.xml", "二手");
+        //handler.cramLJ("https://bj.lianjia.com/sitemap/bj_esf1.xml", "二手");
 
-        handler.cramLJ("https://bj.lianjia.com/sitemap/bj_esf2.xml", "二手");
+        //handler.cramLJ("https://bj.lianjia.com/sitemap/bj_esf2.xml", "二手");
 
-        handler.cramLJ("https://bj.lianjia.com/sitemap/bj_esf3.xml", "二手");
+        //handler.cramLJ("https://bj.lianjia.com/sitemap/bj_esf3.xml", "二手");
 
         //handler.createCommunity();
 

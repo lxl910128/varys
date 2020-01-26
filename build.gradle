@@ -31,6 +31,9 @@ repositories {
         name "aliyunmaven"
         url "http://maven.aliyun.com/nexus/content/groups/public/"
     }
+    maven {
+        url "https://plugins.gradle.org/m2/"
+    }
     mavenCentral()
 }
 
@@ -58,6 +61,10 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.3'
 
-    compileOnly('org.projectlombok:lombok')
+    annotationProcessor 'org.projectlombok:lombok:1.18.2'
+    compileOnly 'org.projectlombok:lombok:1.18.2'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.2'
+    testCompileOnly 'org.projectlombok:lombok:1.18.2'
+
     testCompile('org.springframework.boot:spring-boot-starter-test')
 }
