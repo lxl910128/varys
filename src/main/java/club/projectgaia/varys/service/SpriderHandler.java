@@ -30,8 +30,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
-import club.projectgaia.varys.domain.po.NewsType;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.activation.CommandInfo;
 import javax.annotation.Resource;
 
 import java.io.*;
@@ -61,6 +62,9 @@ public class SpriderHandler {
 
     @Autowired
     private LianJiaJobRepository lianJiaJobRepository;
+
+    @Autowired
+    private TransactionalHandler transactionalHandler;
 
     private static Pattern p = Pattern.compile("来源：(.*)</span>");
     private static Pattern timeP = Pattern.compile("20[0-9]{2}-[0-9]{2}-[0-9]{2}");
@@ -684,6 +688,49 @@ public class SpriderHandler {
 
     }
 
+    public void cramLJ(BufferedReader bf, String type) throws Exception {
+        int i = 0;
+        LianJiaJob job = null;
+        String str;
+        List<LianJiaJob> jobs = new ArrayList<>();
+        Set<String> jobStr = new HashSet<>();
+        while ((str = bf.readLine()) != null) {
+            if ("<url>".equals(str)) {
+                job = new LianJiaJob();
+                job.setType(type);
+                job.setCramFlag(false);
+            } else if (str.startsWith("<loc>")) {
+                job.setUrl(str.replace("<loc>", "").replace("</loc>", ""));
+            } else if (str.startsWith("<lastmod>")) {
+                job.setLastmod(str.replace("<lastmod>", "").replace("</lastmod>", ""));
+            } else if ("</url>".equals(str)) {
+                if (!lianJiaJobRepository.existsByUrl(job.getUrl()) && !jobStr.contains(job.getUrl())) {
+                    jobs.add(job);
+                    jobStr.add(job.getUrl());
+                }
+                i++;
+                if (i % 1000 == 0) {
+                    log.info("爬取job{}个", i);
+                    lianJiaJobRepository.saveAll(jobs);
+                    jobs.clear();
+                    jobStr.clear();
+                }
+            }
+
+        }
+    }
+
+    public void cramLJByFile(String path, String type) {
+        log.info("处理文件:{}", path);
+        try (final InputStream instream = new FileInputStream(path);
+             final Reader reader = new InputStreamReader(instream, "utf-8");
+             BufferedReader bf = new BufferedReader(reader)) {
+            cramLJ(bf, type);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+    }
+
     public void cramLJ(String url, String type) {
         HttpGet httpGet = new HttpGet(url);
         httpGet.setHeader(new BasicHeader("user-agent", "Mozilla/5.0 (compatible; varysSpider/1.0; +http://www.baidu.com/search/spider.html)"));
@@ -694,37 +741,11 @@ public class SpriderHandler {
                 Args.check(entity.getContentLength() <= Integer.MAX_VALUE,
                         "HTTP entity too large to be buffered in memory");
                 Charset charset = getCharset(entity);
-                int i = 0;
                 try (final InputStream instream = entity.getContent();
                      final Reader reader = new InputStreamReader(instream, charset);
                      BufferedReader bf = new BufferedReader(reader)) {
-                    LianJiaJob job = null;
-                    String str;
-                    while ((str = bf.readLine()) != null) {
-                        if ("<url>".equals(str)) {
-                            job = new LianJiaJob();
-                            job.setType(type);
-                            job.setCramFlag(false);
-                        } else if (str.startsWith("<loc>")) {
-                            job.setUrl(str.replace("<loc>", "").replace("</loc>", ""));
-                        } else if (str.startsWith("<lastmod>")) {
-                            job.setLastmod(str.replace("<lastmod>", "").replace("</lastmod>", ""));
-                        } else if ("</url>".equals(str)) {
-                            if (!lianJiaJobRepository.existsByUrl(job.getUrl())) {
-                                lianJiaJobRepository.saveAndFlush(job);
-                            } else {
-                                log.info("url重复:{}", job.getUrl());
-                            }
-                            i++;
-                            if (i % 100 == 0) {
-                                log.info("爬取job{}个", i);
-                            }
-                        }
-
-                    }
-
+                    cramLJ(bf, type);
                 }
-
             }
 
         } catch (Exception e) {
@@ -765,40 +786,40 @@ public class SpriderHandler {
     public void createCommunity() {
         Random r = new Random();
         Pageable pageable = PageRequest.of(0, 100, Sort.by("id"));
-        List<LianJiaJob> allJob = lianJiaJobRepository.getAllByCramFlagFalse(pageable);
+        List<LianJiaJob> allJob = lianJiaJobRepository.getAllByTypeEqualsAndCramFlagIsFalse("小区", pageable);
         AtomicInteger i = new AtomicInteger();
         while (true) {
+            List<LianJiaCommunity> communityList = new ArrayList<>();
+            List<LianJiaJob> jobList = new ArrayList<>();
+            Set<String> cids = new HashSet<>();
             allJob.forEach(x -> {
                 try {
                     Document doc = Jsoup.parse(getContent(x.getUrl()));
                     LianJiaCommunity community = makeCommunity(doc, x.getUrl());
-                    if (!lianJiaCommunity.existsByCid(community.getCid())) {
-                        lianJiaCommunity.save(community);
-                        x.setCramFlag(true);
-                        lianJiaJobRepository.saveAndFlush(x);
+                    if (!lianJiaCommunity.existsByCid(community.getCid()) && !cids.contains(community.getCid())) {
+                        communityList.add(community);
+                        cids.add(community.getCid());
                     }
+                    jobList.add(x);
+                    x.setCramFlag(true);
                     Thread.sleep((r.nextInt(3) + 1) * 1000);
                 } catch (Exception e) {
                     log.error("爬取" + x.getUrl() + "失败！", e);
                     x.setCramFlag(null);
-                    lianJiaJobRepository.saveAndFlush(x);
+                    //lianJiaJobRepository.saveAndFlush(x);
+                    jobList.add(x);
                 }
                 i.getAndIncrement();
-
             });
-            allJob = lianJiaJobRepository.getAllByCramFlagFalse(pageable);
+            transactionalHandler.saveAllCommunity(jobList, communityList);
+            allJob = lianJiaJobRepository.getAllByTypeEqualsAndCramFlagIsFalse("小区", pageable);
             if (allJob.size() == 0) {
                 break;
             }
-            if (i.get() % 100 == 0) {
-                log.info("爬取{}个", i.get());
-            }
-           /* if (i.get() == 3000) {
-                break;
-            }*/
-
+            log.info("爬取{}个", i.get());
         }
     }
+
 
     private LianJiaCommunity makeCommunity(Document doc, String url) throws Exception {
         LianJiaCommunity ret = new LianJiaCommunity();

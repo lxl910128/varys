@@ -7,11 +7,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 /**
- * Created by magneto on 2018/8/12.
+ * @author magneto
+ * @date 2018/8/12
  */
 public interface LianJiaJobRepository extends JpaRepository<LianJiaJob, Long> {
     Boolean existsByUrl(String url);
 
-    List<LianJiaJob> getAllByCramFlagFalse(Pageable pageable);
+    List<LianJiaJob> getAllByTypeEqualsAndCramFlagIsFalse(String type, Pageable pageable);
 
 }

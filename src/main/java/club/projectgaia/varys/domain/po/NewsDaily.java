@@ -14,6 +14,9 @@ import javax.persistence.Id;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
+/**
+ * @author luoxiaolong
+ */
 @Data
 @Entity
 @EntityListeners(AuditingEntityListener.class)
