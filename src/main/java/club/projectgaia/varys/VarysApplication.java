@@ -47,7 +47,9 @@ public class VarysApplication implements CommandLineRunner {
             handler.cramLJByFile(String.format("/Users/luoxiaolong/data/lianjia/bj_cj%d.xml", i), "成交");
         }*/
 
-        handler.createCommunity();
+        //handler.createCommunity();
+
+        handler.createDealHouse(Long.valueOf(args[0]));
 
     }
 }

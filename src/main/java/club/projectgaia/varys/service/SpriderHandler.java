@@ -30,9 +30,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
-import javax.activation.CommandInfo;
 import javax.annotation.Resource;
 
 import java.io.*;
@@ -40,6 +38,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,7 +58,8 @@ public class SpriderHandler {
     private LianJiaCommunityRepository lianJiaCommunity;
     @Autowired
     private ForeignNewsRepository foreignNewsRepository;
-
+    @Autowired
+    private LianJiaDealRepository lianJiaDealRepository;
     @Autowired
     private LianJiaJobRepository lianJiaJobRepository;
 
@@ -494,6 +494,7 @@ public class SpriderHandler {
 
     private String getContent(String url) throws IOException {
         HttpGet get = new HttpGet(url);
+        //get.setHeader(new BasicHeader("user-agent", "Mozilla/5.0 (compatible; varysSpider/1.0; +http://www.baidu.com/search/spider.html)"));
         CloseableHttpResponse response = this.client.execute(get);
         return EntityUtils.toString(response.getEntity(), "utf-8");
     }
@@ -783,6 +784,47 @@ public class SpriderHandler {
         return charset;
     }
 
+    public void createDealHouse(Long start) {
+        Random r = new Random();
+        //Sort.Direction.DESC
+        log.info("开始ID：{}", start);
+        Pageable pageable = PageRequest.of(0, 100, Sort.by("id"));
+        List<LianJiaJob> allJob = lianJiaJobRepository.getAllByTypeEqualsAndIdAfterAndCramFlagIsFalse("成交", start, pageable);
+        AtomicInteger i = new AtomicInteger();
+        while (true) {
+            AtomicReference<Long> lastId = new AtomicReference<>(0L);
+            List<LianJiaDeal> dealList = new ArrayList<>();
+            List<LianJiaJob> jobList = new ArrayList<>();
+            Set<String> cids = new HashSet<>();
+            allJob.forEach(x -> {
+                try {
+                    Document doc = Jsoup.parse(getContent(x.getUrl()));
+                    LianJiaDeal dealHouse = makeDeal(doc);
+                    if (!lianJiaDealRepository.existsByCid(dealHouse.getCid()) && !cids.contains(dealHouse.getCid())) {
+                        dealList.add(dealHouse);
+                        cids.add(dealHouse.getCid());
+                    }
+                    x.setCramFlag(true);
+                    jobList.add(x);
+                    Thread.sleep((r.nextInt(3) + 1) * 1000);
+                    //Thread.sleep(r.nextInt(4000));
+                } catch (Exception e) {
+                    log.error("爬取" + x.getUrl() + "失败！", e);
+                    x.setCramFlag(null);
+                    jobList.add(x);
+                }
+                i.getAndIncrement();
+                lastId.set(x.getId());
+            });
+            transactionalHandler.saveAllDeal(jobList, dealList);
+            allJob = lianJiaJobRepository.getAllByTypeEqualsAndIdAfterAndCramFlagIsFalse("成交", start, pageable);
+            if (allJob.size() == 0) {
+                break;
+            }
+            log.info("爬取{}个,最后一个任务id{}", i.get(), lastId.get());
+        }
+    }
+
     public void createCommunity() {
         Random r = new Random();
         Pageable pageable = PageRequest.of(0, 100, Sort.by("id"));
@@ -800,8 +842,8 @@ public class SpriderHandler {
                         communityList.add(community);
                         cids.add(community.getCid());
                     }
-                    jobList.add(x);
                     x.setCramFlag(true);
+                    jobList.add(x);
                     Thread.sleep((r.nextInt(3) + 1) * 1000);
                 } catch (Exception e) {
                     log.error("爬取" + x.getUrl() + "失败！", e);
@@ -818,6 +860,163 @@ public class SpriderHandler {
             }
             log.info("爬取{}个", i.get());
         }
+    }
+
+    private LianJiaDeal makeDeal(Document doc) throws Exception {
+        LianJiaDeal dealHouse = new LianJiaDeal();
+        Element title = doc.selectFirst("div.house-title > div.wrapper > h1");
+        dealHouse.setTitle(title.text());
+
+        Elements location = doc.select("div.deal-bread > a[href]");
+        Element district = location.get(2);
+        dealHouse.setDistrict(district.text().replace("二手房成交", ""));
+
+        Element area = location.get(3);
+        dealHouse.setArea(area.text().replace("二手房成交", ""));
+
+        Element community = location.get(4);
+        dealHouse.setCommunity(community.text().replace("二手房成交", ""));
+
+        Elements price = doc.select("div.price > span.dealTotalPrice > i");
+        dealHouse.setTransactionPrice(price.text());
+
+        String dealDate = doc.selectFirst("div.house-title > div.wrapper > span").text().replace(" 成交", "");
+        dealHouse.setDealDate(dealDate);
+
+        Elements msg = doc.select("div.info > div.msg > span");
+        msg.forEach(x -> {
+            String value = x.selectFirst("label").text();
+            String property = x.text().replace(value, "");
+            if (!"暂无数据".equals(value)) {
+                switch (property) {
+                    case "挂牌价格（万）":
+                        dealHouse.setListedPrice(value);
+                        break;
+                    case "成交周期（天）":
+                        dealHouse.setTransactionCycle(value);
+                        break;
+                    case "带看（次）":
+                        dealHouse.setTakeLook(value);
+                        break;
+                    case "关注（人）":
+                        dealHouse.setFollow(value);
+                        break;
+                    default:
+                        break;
+
+                }
+            }
+        });
+
+        Elements info = doc.select("section.houseContentBox > div.fl > div.newwrap > div.introContent > div.base > div.content > ul > li");
+        info.forEach(x -> {
+            String property = x.selectFirst("span").text();
+            String value = x.text().replace(property, "");
+            if (!"暂无数据".equals(value)) {
+                switch (property) {
+                    case "房屋户型":
+                        dealHouse.setHouseType(value);
+                        break;
+                    case "所在楼层":
+                        dealHouse.setFloor(value);
+                        break;
+                    case "建筑面积":
+                        dealHouse.setBuildArea(value);
+                        break;
+                    case "户型结构":
+                        dealHouse.setHouseStructure(value);
+                        break;
+                    case "套内面积":
+                        dealHouse.setHouseArea(value);
+                        break;
+                    case "建筑类型":
+                        dealHouse.setBuildType(value);
+                        break;
+                    case "房屋朝向":
+                        dealHouse.setOrientation(value);
+                        break;
+                    case "建成年代":
+                        dealHouse.setBuildAge(value);
+                        break;
+                    case "建筑结构":
+                        dealHouse.setBuildStructure(value);
+                        break;
+                    case "供暖方式":
+                        dealHouse.setHeatingMode(value);
+                        break;
+                    case "梯户比例":
+                        dealHouse.setLadderHousehold(value);
+                        break;
+                    case "产权年限":
+                        dealHouse.setPropertyYear(value);
+                        break;
+                    case "配备电梯":
+                        dealHouse.setLadder(value);
+                        break;
+                    default:
+                        break;
+
+                }
+            }
+        });
+        Elements deal = doc.select("section.houseContentBox > div.fl > div.newwrap > div.introContent > div.transaction > div.content > ul > li");
+        deal.forEach(x -> {
+            String property = x.selectFirst("span").text();
+            String value = x.text().replace(property, "");
+            if (!"暂无数据".equals(value)) {
+                switch (property) {
+                    case "链家编号":
+                        dealHouse.setCid(value);
+                        break;
+                    case "交易权属":
+                        dealHouse.setTradingRight(value);
+                        break;
+                    case "挂牌时间":
+                        dealHouse.setListingDate(value);
+                        break;
+                    case "房屋用途":
+                        dealHouse.setHouseUse(value);
+                        break;
+                    case "房屋年限":
+                        dealHouse.setHouseLife(value);
+                        break;
+                    case "房权所属":
+                        dealHouse.setHouseOwnership(value);
+                        break;
+                    default:
+                        break;
+
+                }
+            }
+        });
+        Elements history = doc.select("div.chengjiao_record > ul.record_list > li");
+        if (history != null) {
+            List<String> h = new ArrayList<>();
+            history.forEach(x -> {
+                h.add(x.selectFirst("span").text() + "," + x.selectFirst("p").text());
+            });
+            dealHouse.setHistory(String.join(";", h));
+        }
+
+        Elements labels = doc.select("div.tags > div.content > a");
+        if (labels != null) {
+            List<String> l = new ArrayList<>();
+            labels.forEach(x -> {
+                l.add(x.text());
+            });
+            dealHouse.setLabel(String.join(";", l));
+        }
+
+        Elements remarks = doc.select("div.baseattribute");
+        if (remarks != null) {
+            List<String> r = new ArrayList<>();
+            remarks.forEach(x -> {
+                r.add(x.selectFirst("div.name").text() + ":" + x.selectFirst("div.content").text());
+            });
+            dealHouse.setRemark(String.join("\r\n", r));
+        }
+
+        return dealHouse;
     }
 
 
