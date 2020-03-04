@@ -61,6 +61,9 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.3'
 
+    // https://mvnrepository.com/artifact/org.jdom/jdom
+    compile group: 'org.jdom', name: 'jdom', version: '2.0.2'
+
     //annotationProcessor 'org.projectlombok:lombok:1.18.2'
     compileOnly 'org.projectlombok:lombok:1.18.2'
     //testAnnotationProcessor 'org.projectlombok:lombok:1.18.2'

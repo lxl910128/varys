@@ -40,16 +40,13 @@ public class VarysApplication implements CommandLineRunner {
 
         //handler.cramLJ("https://bj.lianjia.com/sitemap/bj_xq1.xml", "小区");
 
-       /* for (int i = 1; i <= 4; i++) {
-            handler.cramLJByFile(String.format("/Users/luoxiaolong/data/lianjia/bj_esf%d.xml", i), "二手房");
-        }
-        for (int i = 1; i <= 22; i++) {
+        /*for (int i = 1; i <= 22; i++) {
             handler.cramLJByFile(String.format("/Users/luoxiaolong/data/lianjia/bj_cj%d.xml", i), "成交");
         }*/
 
         //handler.createCommunity();
 
-        handler.createDealHouse(Long.valueOf(args[0]));
+        //handler.createDealHouse(Long.valueOf(args[0]));
 
     }
 }
