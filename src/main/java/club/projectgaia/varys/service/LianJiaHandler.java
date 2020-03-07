@@ -116,9 +116,10 @@ public class LianJiaHandler {
                 if (loc.contains("cj")) {
                     String fileName = loc.replace("https://bj.lianjia.com/sitemap/", "");
                     File dataFile = new File(siteMapPath + File.separator + lastmod + File.separator + fileName);
-                    write2File(loc, dataFile);
-
-                    cramLJByFile(dataFile, "成交");
+                    if (dataFile.exists()) {
+                        write2File(loc, dataFile);
+                        cramLJByFile(dataFile, "成交");
+                    }
                 }
             }
         } catch (IOException e) {

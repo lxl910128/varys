@@ -1,5 +1,7 @@
 package club.projectgaia.varys;
 
+import club.projectgaia.varys.domain.po.LianJiaDeal;
+import club.projectgaia.varys.service.LianJiaHandler;
 import club.projectgaia.varys.service.SpriderHandler;
 
 import org.slf4j.Logger;
@@ -9,14 +11,16 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 
 @SpringBootApplication
 @EnableJpaAuditing
+@EnableScheduling
 public class VarysApplication implements CommandLineRunner {
 
     @Autowired
-    SpriderHandler handler;
+    LianJiaHandler handler;
 
     public static void main(String[] args) {
         SpringApplication.run(VarysApplication.class, args);
@@ -45,7 +49,7 @@ public class VarysApplication implements CommandLineRunner {
         }*/
 
         //handler.createCommunity();
-
+        // handler.checkNewJob();
         //handler.createDealHouse(Long.valueOf(args[0]));
 
     }

@@ -43,5 +43,5 @@ logging:
   root: INFO
 
 lianjia:
-  sitemap-path: H:\lianjia
+  sitemap-path: /home/magneto/lianja
 
