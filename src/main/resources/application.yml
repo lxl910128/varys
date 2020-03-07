@@ -41,3 +41,7 @@ logging:
     club.projectgaia: info
   file: /home/magneto/log/varys.log
   root: INFO
+
+lianjia:
+  sitemap-path: /home/magneto/lianja
+

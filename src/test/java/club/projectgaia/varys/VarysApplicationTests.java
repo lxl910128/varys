@@ -6,6 +6,7 @@ import club.projectgaia.varys.repository.NewsContentRepository;
 import club.projectgaia.varys.repository.NewsDailyRepository;
 
 
+import club.projectgaia.varys.service.LianJiaHandler;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,16 +29,12 @@ public class VarysApplicationTests {
     @Resource(name = "httpClientManagerFactoryBean")
     private CloseableHttpClient client;
 
+    @Autowired
+    private LianJiaHandler lianJiaHandler;
 
     @Test
     public void contextLoads() throws Exception {
-        Pageable pageable = PageRequest.of(0, 10);
-        while (true) {
-            List<NewsDaily> r = newsDailyRepository.findAllByDocIDNotNullOrderByCreateTimeDesc(pageable);
-            System.out.println(r.get(0).getCreateTime().getTime());
-            System.out.println(r.size());
-            pageable = pageable.next();
-        }
+        lianJiaHandler.createDealHouse();
     }
 
 }

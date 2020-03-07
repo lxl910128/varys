@@ -1,5 +1,7 @@
 package club.projectgaia.varys;
 
+import club.projectgaia.varys.domain.po.LianJiaDeal;
+import club.projectgaia.varys.service.LianJiaHandler;
 import club.projectgaia.varys.service.SpriderHandler;
 
 import org.slf4j.Logger;
@@ -9,14 +11,16 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 
 @SpringBootApplication
 @EnableJpaAuditing
+@EnableScheduling
 public class VarysApplication implements CommandLineRunner {
 
     @Autowired
-    SpriderHandler handler;
+    LianJiaHandler handler;
 
     public static void main(String[] args) {
         SpringApplication.run(VarysApplication.class, args);
@@ -40,16 +44,13 @@ public class VarysApplication implements CommandLineRunner {
 
         //handler.cramLJ("https://bj.lianjia.com/sitemap/bj_xq1.xml", "小区");
 
-       /* for (int i = 1; i <= 4; i++) {
-            handler.cramLJByFile(String.format("/Users/luoxiaolong/data/lianjia/bj_esf%d.xml", i), "二手房");
-        }
-        for (int i = 1; i <= 22; i++) {
+        /*for (int i = 1; i <= 22; i++) {
             handler.cramLJByFile(String.format("/Users/luoxiaolong/data/lianjia/bj_cj%d.xml", i), "成交");
         }*/
 
         //handler.createCommunity();
-
-        handler.createDealHouse(Long.valueOf(args[0]));
+        // handler.checkNewJob();
+        //handler.createDealHouse(Long.valueOf(args[0]));
 
     }
 }

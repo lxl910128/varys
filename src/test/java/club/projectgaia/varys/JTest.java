@@ -2,6 +2,7 @@ package club.projectgaia.varys;
 
 
 import club.projectgaia.varys.domain.po.LianJiaDeal;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HeaderElement;
 import org.apache.http.HeaderElementIterator;
 import org.apache.http.HttpHost;
@@ -23,12 +24,17 @@ import org.apache.http.message.BasicHeaderElementIterator;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
+import org.jdom2.Attribute;
+import org.jdom2.JDOMException;
+import org.jdom2.input.SAXBuilder;
 import org.junit.Test;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.jsoup.Jsoup;
@@ -40,6 +46,7 @@ import javax.net.ssl.SSLContext;
 
 import static club.projectgaia.varys.service.HttpClientManagerFactoryBean.createIgnoreVerifySSL;
 
+@Slf4j
 public class JTest {
     @Test
     public void testHttps() throws Exception {
@@ -92,6 +99,191 @@ public class JTest {
                 .build();
         CloseableHttpResponse response = client.execute(new HttpGet("https://www.baidu.com/"));
         System.out.println(EntityUtils.toString(response.getEntity(), "utf-8"));
+    }
+
+    @Test
+    public void testXML(){
+        try {
+            //创建一个解析器
+            SAXBuilder builder = new SAXBuilder();
+
+            //将流加载到解析器中。
+            org.jdom2.Document document = builder.build("<sitemapindex>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_esf1.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_esf2.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_esf3.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_esf4.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_dtf1.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj1.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj2.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj3.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj4.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj5.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj6.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj7.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj8.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj9.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj10.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj11.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj12.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj13.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj14.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj15.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj16.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj17.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj18.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj19.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj20.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj21.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj22.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_cj23.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_xq1.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "<sitemap>\n" +
+                    "<loc>https://bj.lianjia.com/sitemap/bj_fj1.xml</loc>\n" +
+                    "<lastmod>2020-02-26</lastmod>\n" +
+                    "<priority>1.00</priority>\n" +
+                    "</sitemap>\n" +
+                    "</sitemapindex>\n");
+
+            //获取文档的根节点
+            org.jdom2.Element rootElement = document.getRootElement();
+
+            //将根节点的所有子节点获取放到一个集合中
+            List<org.jdom2.Element> list=rootElement.getChildren();
+
+            //循环遍历所有子节点
+            for(org.jdom2.Element element:list){
+                System.out.println("开始遍历第"+(list.indexOf(element)+1)+"本书======");
+
+                //获取所有的属性并遍历输出
+                List<Attribute> list1=element.getAttributes();
+                for(Attribute attr:list1){
+                    System.out.println("属性名是"+attr.getName());
+                    System.out.println("属性值是"+attr.getValue());
+                }
+                System.out.println("结束遍历第"+(list.indexOf(element)+1)+"本书======");
+            }
+        } catch (IOException e) {
+            log.error("连接错误", e);
+        } catch (JDOMException e) {
+            log.error("xml格式错误", e);
+        }
     }
 
     @Test
@@ -259,10 +451,65 @@ public class JTest {
 
     @Test
     public void testSub() {
-        ByteBuffer b = ByteBuffer.allocate(255);
-        b = b.put("adadsf".getBytes());
-        byte c = b.get();
-        System.out.println(c);
+        Map<String, String> map = new HashMap<>();
+        map.put("JD-026", "01jplg");
+        map.put("JD-065", "01jplg");
+        map.put("JD-076", "01jplg");
+        map.put("JD-098", "01jplg");
+        map.put("JD-078", "01jplg");
+        map.put("JD-179", "01jplg");
+
+        map.put("JD-223", "02bgzy");
+        map.put("JD-153", "02bgzy");
+        map.put("JD-199", "02bgzy");
+        map.put("JD-207", "02bgzy");
+        map.put("JD-212", "02bgzy");
+        map.put("JD-209", "02bgzy");
+
+
+        map.put("JD-011", "03tsgxl");
+        map.put("JD-013", "03tsgxl");
+        map.put("JD-017", "03tsgxl");
+        map.put("JD-071", "03tsgxl");
+        map.put("JD-114", "03tsgxl");
+
+
+        map.put("JD-129", "04xxzycg");
+        map.put("JD-166", "04xxzycg");
+        map.put("JD-123", "04xxzycg");
+        map.put("JD-217", "04xxzycg");
+
+
+        map.put("JD-170", "05jyxl");
+        map.put("JD-178", "05jyxl");
+        map.put("JD-194", "05jyxl");
+        map.put("JD-189", "05jyxl");
+
+        map.put("JD-002", "06qtcp");
+        map.put("JD-072", "06qtcp");
+        map.put("JD-074", "06qtcp");
+        map.put("JD-079", "06qtcp");
+        map.put("JD-082", "06qtcp");
+        map.put("JD-083", "06qtcp");
+        map.put("JD-226", "06qtcp");
+        map.put("JD-149", "06qtcp");
+
+
+
+        String str =
+                "<a href=\"%s/%s.html\" tppabs=\"http://localhost:8888/a/products/%s/%s.html\">\n" +
+                        "    <div class=\"proimg_img\">\n" +
+                        "        <img src=\"../../images/products/%s.jpg\" tppabs=\"http://localhost:8888/images/products/%s.jpg\">\n" +
+                        "    </div>\n" +
+                        "    <div class=\"proimg_title\">%s</div>\n" +
+                        "    <div class=\"proimg_time\">2019-05-08</div>\n" +
+                        "    <div class=\"clear\"></div>\n" +
+                        "</a>";
+
+
+        map.forEach((x, y) -> {
+            System.out.println(String.format(str, y, x, y,x, x, x, x));
+        });
     }
 
 }
