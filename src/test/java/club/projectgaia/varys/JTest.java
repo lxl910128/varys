@@ -49,6 +49,10 @@ import static club.projectgaia.varys.service.HttpClientManagerFactoryBean.create
 @Slf4j
 public class JTest {
     @Test
+    public void test(){
+        System.out.println(1000 * 60 * 60 * 24 * 15L);
+    }
+    @Test
     public void testHttps() throws Exception {
         PoolingHttpClientConnectionManager poolHttpcConnManager = new PoolingHttpClientConnectionManager(60, TimeUnit.SECONDS);
         // 最大连接数

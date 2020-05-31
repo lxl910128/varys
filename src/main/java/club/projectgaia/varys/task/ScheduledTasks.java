@@ -12,9 +12,8 @@ import org.springframework.stereotype.Component;
 public class ScheduledTasks {
     @Autowired
     private LianJiaHandler handler;
-    private static final Long NEW_JOB_TIME = 1000 * 60 * 60 * 24 * 15L;
 
-    @Scheduled(fixedDelay = NEW_JOB_TIME)
+    @Scheduled(fixedDelay = 1296000000L)
     public void createNewJob() {
         log.info("开始创建新任务");
         handler.checkNewJob();
@@ -22,7 +21,7 @@ public class ScheduledTasks {
 
     }
 
-    @Scheduled(cron = "0 0 23 * *")
+    @Scheduled(cron = "0 0 17 * * ?")
     public void createDealHouse() {
         log.info("开始爬取成交房");
         handler.createDealHouse();

@@ -14,7 +14,6 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.Args;
 import org.apache.http.util.EntityUtils;
-import org.jdom2.Attribute;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
@@ -116,7 +115,7 @@ public class LianJiaHandler {
                 if (loc.contains("cj")) {
                     String fileName = loc.replace("https://bj.lianjia.com/sitemap/", "");
                     File dataFile = new File(siteMapPath + File.separator + lastmod + File.separator + fileName);
-                    if (dataFile.exists()) {
+                    if (!dataFile.exists()) {
                         write2File(loc, dataFile);
                         cramLJByFile(dataFile, "成交");
                     }
