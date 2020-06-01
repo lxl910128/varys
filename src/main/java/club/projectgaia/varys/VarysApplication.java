@@ -1,7 +1,8 @@
 package club.projectgaia.varys;
 
-import club.projectgaia.varys.service.SpriderHandler;
-
+import club.projectgaia.varys.domain.dto.RidEnum;
+import club.projectgaia.varys.domain.dto.TypeEnum;
+import club.projectgaia.varys.service.BilibiliHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +19,7 @@ public class VarysApplication implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(VarysApplication.class);
 
     @Autowired
-    SpriderHandler handler;
+    private BilibiliHandler bilibiliHandler;
 
     public static void main(String[] args) {
         SpringApplication.run(VarysApplication.class, args);
@@ -26,19 +27,6 @@ public class VarysApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        //world yuqing world news fortune topic sports health english energy mil science finance
-        //legal comments overseas gov gundong reform
-        //handler.getByType("reform");
-        //handler.getAll();
-        //------ v1
-        //this.handler.getWhxw();
-        //this.handler.saveContent();
-        //------ v2
-        handler.getForeignNews("jzhsl_673025", 0, 1);
-        handler.getForeignNews("dhdw_673027", 0, 1);
-        handler.getForeignNews1("wjbzhd", 0, 1);
-        handler.getForeignNews1("wjbxw_673019", 0, 1);
-        handler.getForeignNews1("zyxw", 0, 1);
-
+        bilibiliHandler.listRank(RidEnum.ALL, "3", TypeEnum.ALL);
     }
 }

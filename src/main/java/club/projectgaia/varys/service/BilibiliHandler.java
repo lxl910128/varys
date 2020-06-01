@@ -1,15 +1,23 @@
 package club.projectgaia.varys.service;
 
 import club.projectgaia.varys.domain.dto.BiliRsp;
+import club.projectgaia.varys.domain.dto.RidEnum;
+import club.projectgaia.varys.domain.dto.TypeEnum;
+import club.projectgaia.varys.domain.po.BiliRank;
+import club.projectgaia.varys.repository.BiliRankRepository;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author Phoenix Luo
@@ -18,14 +26,14 @@ import javax.annotation.Resource;
 @Component
 @Slf4j
 public class BilibiliHandler {
-    // 0 全站  36 科技 160 生活
-    public static String[] RID = {"0", "36", "160"};
+
+    @Autowired
+    private BiliRankRepository biliRank;
+
 
     // 3 3日榜 ；7 7日榜 ；30 月榜
     public static String[] DAY = {"3", "7", "30"};
 
-    // 1 全站榜 ；2 原创榜 ；3 新人榜
-    public static String[] TYPE = {"1", "2", "3"};
 
     @Resource(name = "httpClientManagerFactoryBean")
     private CloseableHttpClient client;
@@ -34,7 +42,7 @@ public class BilibiliHandler {
 
     private static String url = "https://api.bilibili.com/x/web-interface/ranking?rid=%s&day=%s&type=%s&arc_type=0";
 
-    public void listRank(String rid, String day, String type) {
+    public void listRank(RidEnum rid, String day, TypeEnum type) {
         log.info("开始爬取任务：");
         String url = String.format(BilibiliHandler.url, rid, day, type);
 
@@ -53,25 +61,42 @@ public class BilibiliHandler {
             String result = EntityUtils.toString(response.getEntity(), "utf-8");
             log.info("爬取结果：{}", result);
             BiliRsp ret = JSON.parseObject(result, BiliRsp.class);
-
+            List<BiliRank> rets = rep2PO(ret, rid, day, type);
+            for (BiliRank r : rets) {
+                log.info(r.getTitle());
+                biliRank.save(r);
+            }
+            log.info("爬取榜单结束！");
 
         } catch (Exception e) {
-            log.warn("爬取B站rid:{},day:{},type:{}错误!", rid, day, type, e);
+            log.warn("爬取B站rid:{},day:{},type:{}错误!", rid.getName(), day, type.getName(), e);
         }
 
     }
 
-    private String getReferer(String rid, String day, String type) {
+    private String getReferer(RidEnum rid, String day, TypeEnum type) {
         switch (type) {
-            case "1":
-                return String.format("https://www.bilibili.com/ranking/all/%s/0/%s", rid, day);
-            case "2":
-                return String.format("https://www.bilibili.com/ranking/origin/%s/0/%s", rid, day);
-            case "3":
-                return String.format("https://www.bilibili.com/ranking/rookie/%s/0/%s", rid, day);
+            case ALL:
+                return String.format("https://www.bilibili.com/ranking/all/%s/0/%s", rid.getValue(), day);
+            case ORIGIN:
+                return String.format("https://www.bilibili.com/ranking/origin/%s/0/%s", rid.getValue(), day);
+            case ROOKIE:
+                return String.format("https://www.bilibili.com/ranking/rookie/%s/0/%s", rid.getValue(), day);
             default:
                 return "https://www.bilibili.com";
         }
+
+    }
+
+    private List<BiliRank> rep2PO(BiliRsp ret, RidEnum rid, String day, TypeEnum type) {
+        return ret.getData().getList().stream().map(rsp -> {
+            BiliRank rank = new BiliRank();
+            BeanUtils.copyProperties(rsp, rank);
+            rank.setRankType(type);
+            rank.setRid(rid);
+            rank.setUpdateFeq(day);
+            return rank;
+        }).collect(Collectors.toList());
 
     }
 

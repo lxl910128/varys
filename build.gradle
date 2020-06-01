@@ -47,6 +47,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.3'
 
-    compileOnly('org.projectlombok:lombok')
+    compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.6'
+    annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.6'
     testCompile('org.springframework.boot:spring-boot-starter-test')
 }

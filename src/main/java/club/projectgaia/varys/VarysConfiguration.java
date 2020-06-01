@@ -57,6 +57,7 @@ public class VarysConfiguration {
     public ConnectionKeepAliveStrategy connectionKeepAliveStrategy() {
         return new ConnectionKeepAliveStrategy() {
 
+            @Override
             public long getKeepAliveDuration(HttpResponse response, HttpContext context) {
                 // Honor 'keep-alive' header
                 HeaderElementIterator it = new BasicHeaderElementIterator(
