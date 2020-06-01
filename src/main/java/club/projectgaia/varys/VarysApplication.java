@@ -27,6 +27,17 @@ public class VarysApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        String[] feqs = {"3", "7", "30"};
         bilibiliHandler.listRank(RidEnum.ALL, "3", TypeEnum.ALL);
+        for (RidEnum ridEnum : RidEnum.values()) {
+            for (TypeEnum typeEnum : TypeEnum.values()) {
+                for (String feq : feqs) {
+                    bilibiliHandler.listRank(ridEnum, feq, typeEnum);
+                    // 爬完一个榜单休息60秒
+                    Thread.sleep(60000);
+                }
+            }
+        }
+
     }
 }

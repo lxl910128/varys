@@ -16,4 +16,13 @@ public enum TypeEnum {
 
     private String name;
     private String value;
+
+    public static TypeEnum matchValue(String value) {
+        for (TypeEnum typeEnum : TypeEnum.values()) {
+            if (typeEnum.getValue().equals(value)) {
+                return typeEnum;
+            }
+        }
+        return null;
+    }
 }

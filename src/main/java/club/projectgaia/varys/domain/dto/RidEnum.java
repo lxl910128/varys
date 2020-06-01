@@ -16,4 +16,13 @@ public enum RidEnum {
 
     private String name;
     private String value;
+
+    public static RidEnum matchValue(String value) {
+        for (RidEnum ridEnum : RidEnum.values()) {
+            if (ridEnum.getValue().equals(value)) {
+                return ridEnum;
+            }
+        }
+        return null;
+    }
 }
