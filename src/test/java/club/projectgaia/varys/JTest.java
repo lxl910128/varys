@@ -27,31 +27,30 @@ import org.apache.http.util.EntityUtils;
 import org.jdom2.Attribute;
 import org.jdom2.JDOMException;
 import org.jdom2.input.SAXBuilder;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.junit.Test;
 
-import java.io.*;
-import java.nio.ByteBuffer;
+import javax.net.ssl.SSLContext;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
-
-import javax.net.ssl.SSLContext;
-
 import static club.projectgaia.varys.service.HttpClientManagerFactoryBean.createIgnoreVerifySSL;
 
 @Slf4j
 public class JTest {
     @Test
-    public void test(){
+    public void test() {
         System.out.println(1000 * 60 * 60 * 24 * 15L);
     }
+
     @Test
     public void testHttps() throws Exception {
         PoolingHttpClientConnectionManager poolHttpcConnManager = new PoolingHttpClientConnectionManager(60, TimeUnit.SECONDS);
@@ -106,7 +105,7 @@ public class JTest {
     }
 
     @Test
-    public void testXML(){
+    public void testXML() {
         try {
             //创建一个解析器
             SAXBuilder builder = new SAXBuilder();
@@ -269,24 +268,24 @@ public class JTest {
             org.jdom2.Element rootElement = document.getRootElement();
 
             //将根节点的所有子节点获取放到一个集合中
-            List<org.jdom2.Element> list=rootElement.getChildren();
+            List<org.jdom2.Element> list = rootElement.getChildren();
 
             //循环遍历所有子节点
-            for(org.jdom2.Element element:list){
-                System.out.println("开始遍历第"+(list.indexOf(element)+1)+"本书======");
+            for (org.jdom2.Element element : list) {
+                System.out.println("开始遍历第" + (list.indexOf(element) + 1) + "本书======");
 
                 //获取所有的属性并遍历输出
-                List<Attribute> list1=element.getAttributes();
-                for(Attribute attr:list1){
-                    System.out.println("属性名是"+attr.getName());
-                    System.out.println("属性值是"+attr.getValue());
+                List<Attribute> list1 = element.getAttributes();
+                for (Attribute attr : list1) {
+                    System.out.println("属性名是" + attr.getName());
+                    System.out.println("属性值是" + attr.getValue());
                 }
-                System.out.println("结束遍历第"+(list.indexOf(element)+1)+"本书======");
+                System.out.println("结束遍历第" + (list.indexOf(element) + 1) + "本书======");
             }
         } catch (IOException e) {
-            log.error("连接错误", e);
+            //  log.error("连接错误", e);
         } catch (JDOMException e) {
-            log.error("xml格式错误", e);
+            //   log.error("xml格式错误", e);
         }
     }
 
@@ -499,7 +498,6 @@ public class JTest {
         map.put("JD-149", "06qtcp");
 
 
-
         String str =
                 "<a href=\"%s/%s.html\" tppabs=\"http://localhost:8888/a/products/%s/%s.html\">\n" +
                         "    <div class=\"proimg_img\">\n" +
@@ -512,7 +510,7 @@ public class JTest {
 
 
         map.forEach((x, y) -> {
-            System.out.println(String.format(str, y, x, y,x, x, x, x));
+            System.out.println(String.format(str, y, x, y, x, x, x, x));
         });
     }
 
