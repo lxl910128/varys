@@ -1,11 +1,14 @@
 package club.projectgaia.varys;
 
+import club.projectgaia.varys.domain.dto.RidEnum;
 import club.projectgaia.varys.domain.po.NewsContent;
 import club.projectgaia.varys.domain.po.NewsDaily;
 import club.projectgaia.varys.repository.NewsContentRepository;
 import club.projectgaia.varys.repository.NewsDailyRepository;
 
 
+import club.projectgaia.varys.schedule.ScheduledTasks;
+import club.projectgaia.varys.service.BilibiliHandler;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -23,7 +26,7 @@ import javax.annotation.Resource;
 @SpringBootTest
 public class VarysApplicationTests {
     @Autowired
-    NewsDailyRepository newsDailyRepository;
+    private ScheduledTasks handler;
 
     @Resource(name = "httpClientManagerFactoryBean")
     private CloseableHttpClient client;
@@ -31,13 +34,7 @@ public class VarysApplicationTests {
 
     @Test
     public void contextLoads() throws Exception {
-        Pageable pageable = PageRequest.of(0, 10);
-        while (true) {
-            List<NewsDaily> r = newsDailyRepository.findAllByDocIDNotNullOrderByCreateTimeDesc(pageable);
-            System.out.println(r.get(0).getCreateTime().getTime());
-            System.out.println(r.size());
-            pageable = pageable.next();
-        }
+        handler.createNewJob();
     }
 
 }

@@ -15,7 +15,7 @@ public class ScheduledTasks {
     @Autowired
     private BilibiliHandler handler;
 
-    @Scheduled(fixedDelay = 86400000L)
+    @Scheduled(cron = "0 0 18 * * ?")
     public void createNewJob() {
         log.info("开始bili新任务");
         String[] feqs = {"3", "7", "30"};
@@ -25,7 +25,7 @@ public class ScheduledTasks {
                     handler.listRank(ridEnum, feq, typeEnum);
                     // 爬完一个榜单休息60秒
                     try {
-                        Thread.sleep(60000);
+                        Thread.sleep(30000);
                     } catch (Exception e) {
                         log.warn("任务失败", e);
                     }
@@ -33,8 +33,6 @@ public class ScheduledTasks {
             }
         }
         log.info("bili新任务结束");
-
     }
-
 
 }

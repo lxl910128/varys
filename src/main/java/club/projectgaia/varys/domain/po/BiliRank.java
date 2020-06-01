@@ -31,17 +31,17 @@ public class BiliRank {
     private Long id;
 
     // 榜单分类
-    @Column
+    @Column(length = 32)
     @Enumerated(EnumType.STRING)
     private TypeEnum rankType;
 
     // 分区ID
-    @Column
+    @Column(length = 32)
     @Enumerated(EnumType.STRING)
     private RidEnum rid;
 
     // 更新周期
-    @Column
+    @Column(length = 32)
     private String updateFeq;
 
     @Column(length = 64)
@@ -80,6 +80,14 @@ public class BiliRank {
     // 弹幕数
     @Column
     private Integer video_review;
+    // 榜单名称
+    @Column
+    private String rankName;
+
+    // 榜单日期
+    @Column(length = 32)
+    private String collectionDate;
+
 
     @Column(nullable = false, updatable = false)
     @Temporal(TemporalType.TIMESTAMP)

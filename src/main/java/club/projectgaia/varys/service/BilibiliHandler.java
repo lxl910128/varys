@@ -16,7 +16,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -29,6 +32,10 @@ public class BilibiliHandler {
 
     @Autowired
     private BiliRankRepository biliRank;
+
+    private static String RANK_NAME = "%s %s%s区%s日榜";
+
+    private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
 
     // 3 3日榜 ；7 7日榜 ；30 月榜
@@ -43,6 +50,7 @@ public class BilibiliHandler {
     private static String url = "https://api.bilibili.com/x/web-interface/ranking?rid=%s&day=%s&type=%s&arc_type=0";
 
     public void listRank(RidEnum rid, String day, TypeEnum type) {
+        String dateStr = DATE_FORMAT.format(new Date());
         log.info("开始爬取任务：rid:{},day:{},type:{}", rid.getName(), day, type.getName());
         String url = String.format(BilibiliHandler.url, rid, day, type);
 
@@ -63,8 +71,13 @@ public class BilibiliHandler {
             BiliRsp ret = JSON.parseObject(result, BiliRsp.class);
             List<BiliRank> rets = rep2PO(ret, rid, day, type);
             for (BiliRank r : rets) {
-                log.info(r.getTitle());
-                biliRank.save(r);
+                r.setRankName(String.format(RANK_NAME, dateStr, type.getName(), rid.getName(), day));
+                r.setCollectionDate(dateStr);
+
+                Optional<BiliRank> oldRank = biliRank.findByRankTypeAndRidAndUpdateFeqAndCollectionDateAndBvid(type, rid, dateStr, dateStr, r.getBvid());
+                if (!oldRank.isPresent()) {
+                    biliRank.save(r);
+                }
             }
             log.info("爬取榜单结束！");
 
