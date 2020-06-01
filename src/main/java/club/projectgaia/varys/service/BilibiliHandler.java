@@ -43,7 +43,7 @@ public class BilibiliHandler {
     private static String url = "https://api.bilibili.com/x/web-interface/ranking?rid=%s&day=%s&type=%s&arc_type=0";
 
     public void listRank(RidEnum rid, String day, TypeEnum type) {
-        log.info("开始爬取任务：");
+        log.info("开始爬取任务：rid:{},day:{},type:{}", rid.getName(), day, type.getName());
         String url = String.format(BilibiliHandler.url, rid, day, type);
 
         HttpGet get = new HttpGet(url);
