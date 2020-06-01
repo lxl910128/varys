@@ -22,7 +22,7 @@ httpclient:
     timeToLive: 600
 spring:
   datasource:
-    url: jdbc:mysql://106.13.42.54/varys?characterEncoding=utf-8
+    url: jdbc:mysql://106.13.42.54/varys
     #url: jdbc:mysql://176.122.176.71:3306/varys?characterEncoding=utf-8
     type: com.alibaba.druid.pool.DruidDataSource
     username: magneto
