@@ -39,7 +39,9 @@ spring:
 logging:
   level:
     club.projectgaia: info
-  file: /home/magneto/log/varys.log
+  file: ${LOG_PATH}
   root: INFO
 
+lianjia:
+  sitemap-path: /home/magneto/lianja
 
