@@ -35,7 +35,7 @@ public class VarysApplicationTests {
 
     @Test
     public void testHandler() throws Exception {
-        Pageable pageable = PageRequest.of(0, 1000, Sort.by("docID"));
+       /* Pageable pageable = PageRequest.of(0, 1000, Sort.by("docID"));
         boolean flag = true;
         while (flag) {
             List<NewsDaily> change = new ArrayList<>();
@@ -58,9 +58,9 @@ public class VarysApplicationTests {
             }
             newsDailyRepository.saveAll(change);
             System.out.println("初始化:" + init + " 保存:" + save);
-        }
-        //spriderHandler.getWhxw();
-        // spriderHandler.saveContent();
+        }*/
+        // spriderHandler.getWhxw();
+        spriderHandler.saveContent();
     }
 
 }

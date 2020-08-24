@@ -443,8 +443,9 @@ public class SpriderHandler {
                         content.append(x.text());
                     });
                     String all = content.toString().replaceAll("\r", "").replaceAll("\n", "").replace("　", "");
+                            //.replaceAll("[^(a-zA-Z0-9\\u4e00-\\u9fa5)]", "");
                     NewsContent save = new NewsContent();
-                    save.setContent(all);
+                    save.setContent(new String(all.getBytes("utf8"), "utf8"));
                     save.setTime(time);
                     save.setDescription(description);
                     save.setDocID(news.getDocID());
@@ -465,7 +466,6 @@ public class SpriderHandler {
                 }
             }
             transactionalHandler.saveNews(allChange, allSave);
-            pageable = pageable.next();
         }
         log.info("本次新保存{}篇新闻", i);
     }

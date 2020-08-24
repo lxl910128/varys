@@ -22,7 +22,7 @@ apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
 group = 'club.projectgaia'
-version = '0.0.2-SNAPSHOT'
+version = '0.1.0-SNAPSHOT'
 sourceCompatibility = 1.8
 
 repositories {
@@ -52,7 +52,7 @@ dependencies {
     // https://mvnrepository.com/artifact/com.alibaba/fastjson
     compile group: 'com.alibaba', name: 'fastjson', version: '1.2.47'
     // https://mvnrepository.com/artifact/mysql/mysql-connector-java
-    compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.39'
+    compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.47'
     // https://mvnrepository.com/artifact/com.alibaba/druid
     compile group: 'com.alibaba', name: 'druid', version: '1.1.10'
     // https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
@@ -66,6 +66,11 @@ dependencies {
     // https://mvnrepository.com/artifact/org.jdom/jdom
     compile group: 'org.jdom', name: 'jdom', version: '2.0.2'
 
+    // https://mvnrepository.com/artifact/com.vdurmont/emoji-java
+    compile group: 'com.vdurmont', name: 'emoji-java', version: '5.1.1'
+
+    // https://mvnrepository.com/artifact/cn.hutool/hutool-all
+    compile group: 'cn.hutool', name: 'hutool-all', version: '5.3.10'
 
     testCompile('org.springframework.boot:spring-boot-starter-test')
 }

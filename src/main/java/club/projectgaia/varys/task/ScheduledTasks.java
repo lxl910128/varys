@@ -21,7 +21,8 @@ public class ScheduledTasks {
     @Autowired
     private SpriderHandler spriderHandler;
 
-    @Scheduled(initialDelay = 3600000L, fixedDelay = 1296000000L)
+    // 每天检查是否有新任务
+    @Scheduled(initialDelay = 3600000L, fixedDelay = 86400000L)
     public void createNewLianJiaJob() {
         log.info("开始创建链家新任务");
         lianJiaHandler.checkNewJob();

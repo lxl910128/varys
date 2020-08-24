@@ -1,5 +1,7 @@
 package club.projectgaia.varys;
 
+import cn.hutool.core.collection.ListUtil;
+import com.alibaba.druid.pool.DruidDataSource;
 import org.apache.http.HeaderElement;
 import org.apache.http.HeaderElementIterator;
 import org.apache.http.HttpHost;
@@ -15,10 +17,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Configuration
 public class VarysConfiguration {
+
 
     /**
      * 连接池最大连接数
@@ -87,7 +91,7 @@ public class VarysConfiguration {
     private int proxyPort;
 
     @Bean
-    public DefaultProxyRoutePlanner defaultProxyRoutePlanner(){
+    public DefaultProxyRoutePlanner defaultProxyRoutePlanner() {
         HttpHost proxy = new HttpHost(this.proxyHost, this.proxyPort);
         return new DefaultProxyRoutePlanner(proxy);
     }
@@ -101,8 +105,9 @@ public class VarysConfiguration {
 
     @Value("${httpclient.config.socketTimeout}")
     private int socketTimeout = 2000;
+
     @Bean
-    public RequestConfig config(){
+    public RequestConfig config() {
         return RequestConfig.custom()
                 .setConnectionRequestTimeout(this.connectRequestTimeout)
                 .setConnectTimeout(this.connectTimeout)
@@ -111,6 +116,4 @@ public class VarysConfiguration {
     }
 
 
-
-    
 }
