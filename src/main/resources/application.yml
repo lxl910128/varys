@@ -13,11 +13,11 @@ httpclient:
     connMaxTotal: 5
     maxPerRoute: 5
     # 连接超时时间，单位ms
-    connectTimeout: 1000
+    connectTimeout: 60000
     # 请求超时时间
-    connectRequestTimeout: 2000
+    connectRequestTimeout: 60000
     # sock超时时间
-    socketTimeout: 50000
+    socketTimeout: 120000
     # 连接存活时间，单位s
     timeToLive: 600
 spring:

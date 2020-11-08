@@ -17,4 +17,8 @@ public interface LianJiaJobRepository extends JpaRepository<LianJiaJob, Long> {
 
     List<LianJiaJob> getAllByTypeEqualsAndIdAfterAndCramFlagIsFalse(String type, Long id, Pageable pageable);
 
+    List<LianJiaJob> getAllByTypeEqualsAndCramFlagIsNull(String type);
+
+    List<LianJiaJob> getAllByTypeEqualsAndCramFlagIsNull(String type, Pageable pageable);
+
 }

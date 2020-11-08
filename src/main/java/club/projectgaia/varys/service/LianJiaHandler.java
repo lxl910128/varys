@@ -28,10 +28,22 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.Reader;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -48,6 +60,56 @@ public class LianJiaHandler {
     private LianJiaDealRepository lianJiaDealRepository;
     @Autowired
     private TransactionalHandler transactionalHandler;
+
+    public void fixDealHouse() {
+        Random r = new Random();
+        Pageable pageable = PageRequest.of(0, 100, Sort.by("id"));
+        List<LianJiaJob> allJob = lianJiaJobRepository.getAllByTypeEqualsAndCramFlagIsNull("成交", pageable);
+        AtomicInteger i = new AtomicInteger();
+        List<LianJiaDeal> dealList = new ArrayList<>();
+        List<LianJiaJob> jobList = new ArrayList<>();
+        Set<String> cids = new HashSet<>();
+        while (true) {
+            allJob.forEach(x -> {
+                try {
+                    if (x.getUrl().endsWith("html")) {
+                        org.jsoup.nodes.Document doc = Jsoup.parse(getContentStr(x.getUrl()));
+                        LianJiaDeal dealHouse = makeDeal(doc);
+                        if (!lianJiaDealRepository.existsByCid(dealHouse.getCid()) && !cids.contains(dealHouse.getCid())) {
+                            dealList.add(dealHouse);
+                            cids.add(dealHouse.getCid());
+                        }
+                        x.setCramFlag(true);
+                        jobList.add(x);
+                    } else {
+                        x.setCramFlag(true);
+                        jobList.add(x);
+                    }
+                } catch (Exception e) {
+                    log.error("爬取" + x.getUrl() + "失败！");
+                    x.setCramFlag(false);
+                    jobList.add(x);
+
+                } finally {
+                    try {
+                        Thread.sleep((r.nextInt(3) + 1) * 1000);
+                    } catch (Exception a) {
+
+                    }
+                }
+                i.getAndIncrement();
+                log.info("处理{}个", i.get());
+            });
+            transactionalHandler.saveAllDeal(jobList, dealList);
+
+            allJob = lianJiaJobRepository.getAllByTypeEqualsAndCramFlagIsNull("成交", pageable);
+            if (allJob.size() == 0) {
+                break;
+            }
+        }
+
+
+    }
 
     public void createDealHouse() {
         Random r = new Random();
@@ -72,12 +134,18 @@ public class LianJiaHandler {
                     }
                     x.setCramFlag(true);
                     jobList.add(x);
-                    Thread.sleep((r.nextInt(3) + 1) * 1000);
-                    //Thread.sleep(r.nextInt(4000));
+
                 } catch (Exception e) {
                     log.error("爬取" + x.getUrl() + "失败！", e);
                     x.setCramFlag(null);
                     jobList.add(x);
+                } finally {
+                    try {
+                        Thread.sleep((r.nextInt(3) + 1) * 1000);
+                        //Thread.sleep(r.nextInt(4000));
+                    } catch (Exception e) {
+
+                    }
                 }
                 i.getAndIncrement();
                 lastId.set(x.getId());
@@ -262,9 +330,13 @@ public class LianJiaHandler {
     }
 
 
-    private LianJiaDeal makeDeal(org.jsoup.nodes.Document doc) throws Exception {
+    public LianJiaDeal makeDeal(org.jsoup.nodes.Document doc) throws Exception {
         LianJiaDeal dealHouse = new LianJiaDeal();
         org.jsoup.nodes.Element title = doc.selectFirst("div.house-title > div.wrapper > h1");
+        if (title == null) {
+            log.warn("页面未找到！");
+            throw new RuntimeException("页面格式无法解析，页面未找到！");
+        }
         dealHouse.setTitle(title.text());
 
         Elements location = doc.select("div.deal-bread > a[href]");
