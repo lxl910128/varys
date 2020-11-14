@@ -66,10 +66,11 @@ public class LianJiaHandler {
         Pageable pageable = PageRequest.of(0, 100, Sort.by("id"));
         List<LianJiaJob> allJob = lianJiaJobRepository.getAllByTypeEqualsAndCramFlagIsNull("成交", pageable);
         AtomicInteger i = new AtomicInteger();
-        List<LianJiaDeal> dealList = new ArrayList<>();
-        List<LianJiaJob> jobList = new ArrayList<>();
+
         Set<String> cids = new HashSet<>();
         while (true) {
+            List<LianJiaDeal> dealList = new ArrayList<>();
+            List<LianJiaJob> jobList = new ArrayList<>();
             allJob.forEach(x -> {
                 try {
                     if (x.getUrl().endsWith("html")) {
@@ -92,7 +93,7 @@ public class LianJiaHandler {
 
                 } finally {
                     try {
-                        Thread.sleep((r.nextInt(3) + 1) * 1000);
+                        Thread.sleep((r.nextInt(3) + 2) * 1000);
                     } catch (Exception a) {
 
                     }
@@ -101,7 +102,6 @@ public class LianJiaHandler {
                 log.info("处理{}个", i.get());
             });
             transactionalHandler.saveAllDeal(jobList, dealList);
-
             allJob = lianJiaJobRepository.getAllByTypeEqualsAndCramFlagIsNull("成交", pageable);
             if (allJob.size() == 0) {
                 break;
@@ -141,7 +141,7 @@ public class LianJiaHandler {
                     jobList.add(x);
                 } finally {
                     try {
-                        Thread.sleep((r.nextInt(3) + 1) * 1000);
+                        Thread.sleep((r.nextInt(3) + 2) * 1000);
                         //Thread.sleep(r.nextInt(4000));
                     } catch (Exception e) {
 
@@ -151,6 +151,7 @@ public class LianJiaHandler {
                 lastId.set(x.getId());
             });
             transactionalHandler.saveAllDeal(jobList, dealList);
+
             allJob = lianJiaJobRepository.getAllByTypeEqualsAndIdAfterAndCramFlagIsFalse("成交", start, pageable);
             if (allJob.size() == 0) {
                 break;
